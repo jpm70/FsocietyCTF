@@ -1,0 +1,2889 @@
+@import "tailwindcss";
+
+:root {
+  --bg-base: #1a1a1a;
+  --bg-deep: #09090b;
+  --blood-red: #d91424;
+  --blood-red-glow: rgba(217, 20, 36, 0.55);
+  --terminal-green: #00ff41;
+  --terminal-green-dim: rgba(0, 255, 65, 0.16);
+  --manga-ink: #0c0c0e;
+  --manga-paper: #f4f1ea;
+  --font-hacker: 'Fira Code', 'Courier New', monospace;
+  --font-manga-title: 'Bangers', cursive;
+  --font-manga-dialogue: 'Chakra Petch', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000000;
+  font-family: var(--font-hacker);
+  color: var(--manga-paper);
+  user-select: none;
+}
+
+/* ==========================================================================
+   CONTENEDOR PRINCIPAL (#game-container)
+   Ocupa 100vw x 100vh y prepara la carga de fondos por escena
+   ========================================================================== */
+#game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-base); /* #1a1a1a temporal por defecto */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), filter 1.2s ease;
+}
+
+/* Clase lista para cargar la imagen de la Escena 0 */
+#game-container.scene-0-bg {
+  background-color: #1a1a1a;
+  background-image:
+    radial-gradient(circle at 50% 35%, rgba(26, 26, 26, 0.25) 0%, rgba(10, 10, 12, 0.88) 85%),
+    url('./assets/img/scene0_welcome.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Modo solo #1a1a1a (para probar sin imagen si se desea) */
+#game-container.scene-0-solid {
+  background-color: #1a1a1a;
+  background-image:
+    radial-gradient(circle at 50% 40%, rgba(217, 20, 36, 0.08) 0%, rgba(10, 10, 12, 0.92) 80%);
+}
+
+/* Fondo de la Escena 1 (Web Corporativa de ECorp - Reto SQLi) */
+#game-container.scene-1-bg {
+  background-color: #1a1a1a;
+  background-image:
+    radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.85) 90%),
+    url('./assets/img/scene1_sqli.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Fondo de la Escena 2 (Red Interna de ECorp - Reto Impresora Compartida) */
+#game-container.scene-2-bg {
+  background-color: #1a1a1a;
+  background-image:
+    radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.85) 90%),
+    url('./assets/img/scene2_internal.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Fondo de la Escena 3 (Equipo de Seguridad - Reto SMB y Clonado RFID) */
+#game-container.scene-3-bg {
+  background-color: #1a1a1a;
+  background-image:
+    radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.85) 90%),
+    url('./assets/img/scene3_security.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Fondo de la Escena 4 (Despacho del CEO - Fuerza Bruta SSH y Base64) */
+#game-container.scene-4-bg {
+  background-color: #1a1a1a;
+  background-image:
+    radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.85) 90%),
+    url('./assets/img/scene4_ceo.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Fondo de la Escena 5 (Exteriores ECorp: Evil Portal, Alarma y Cámara) */
+#game-container.scene-5-bg {
+  background-color: #1a1a1a;
+  background-image:
+    radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.85) 90%),
+    url('./assets/img/scene5_exterior.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Fondo de la Escena 6 (La Caja Fuerte - Hardware Hacking Serial UART) */
+#game-container.scene-6-bg {
+  background-color: #1a1a1a;
+  background-image:
+    radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.88) 90%),
+    url('./assets/img/scene6_vault.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Trama Halftone estilo Manga Seinen + Líneas CRT sutiles */
+.manga-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.22) 0px,
+      rgba(0, 0, 0, 0.22) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  background-size: 16px 16px, 100% 4px;
+}
+
+/* Viñeta dramática estilo novela gráfica */
+.manga-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  box-shadow: inset 0 0 130px rgba(0, 0, 0, 0.92), inset 0 0 35px rgba(217, 20, 36, 0.18);
+}
+
+/* ==========================================================================
+   CAPA DE INTERFAZ (UI) - ESCENA 0
+   ========================================================================== */
+.scene-layer {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6vh 2rem 7vh;
+  transition: opacity 1s ease, transform 1s ease;
+}
+
+/* Estado oculto durante el fundido a negro */
+.fade-out-black {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Cabecera y Título con Efecto Glitch / Neón */
+.title-wrapper {
+  text-align: center;
+  margin-top: 4vh;
+  position: relative;
+}
+
+.system-kicker {
+  font-family: var(--font-hacker);
+  font-size: 0.8rem;
+  letter-spacing: 0.28em;
+  color: var(--terminal-green);
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  opacity: 0.9;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
+}
+
+.glitch-title {
+  position: relative;
+  font-family: var(--font-hacker);
+  font-size: clamp(3rem, 7vw, 6rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--manga-paper);
+  text-transform: uppercase;
+  text-shadow:
+    0 0 12px var(--blood-red-glow),
+    0 0 28px rgba(217, 20, 36, 0.35),
+    4px 4px 0px #000000;
+  animation: glitch-skew 4s infinite linear alternate-reverse;
+}
+
+.glitch-title::before,
+.glitch-title::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.glitch-title::before {
+  left: 3px;
+  text-shadow: -2px 0 var(--blood-red);
+  clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+  animation: glitch-anim-1 2.8s infinite linear alternate-reverse;
+}
+
+.glitch-title::after {
+  left: -3px;
+  text-shadow: -2px 0 var(--terminal-green);
+  clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+  animation: glitch-anim-2 3.2s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim-1 {
+  0%, 82%, 100% {
+    transform: translate(0);
+    clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+  }
+  85% {
+    transform: translate(-4px, 2px);
+    clip-path: polygon(0 12%, 100% 12%, 100% 42%, 0 42%);
+  }
+  90% {
+    transform: translate(4px, -2px);
+    clip-path: polygon(0 45%, 100% 45%, 100% 70%, 0 70%);
+  }
+  95% {
+    transform: translate(-2px, 0);
+  }
+}
+
+@keyframes glitch-anim-2 {
+  0%, 78%, 100% {
+    transform: translate(0);
+    clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+  }
+  81% {
+    transform: translate(4px, 1px);
+    clip-path: polygon(0 55%, 100% 55%, 100% 88%, 0 88%);
+  }
+  87% {
+    transform: translate(-4px, -1px);
+    clip-path: polygon(0 20%, 100% 20%, 100% 52%, 0 52%);
+  }
+}
+
+@keyframes glitch-skew {
+  0%, 92%, 100% {
+    transform: skew(0deg);
+  }
+  94% {
+    transform: skew(-1.5deg);
+  }
+  96% {
+    transform: skew(1.5deg);
+  }
+}
+
+/* ==========================================================================
+   CUADRO DE DIÁLOGO ESTILO NOVELA VISUAL / MANGA (ABAJO EN EL CENTRO)
+   ========================================================================== */
+.vn-bottom-dock {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.vn-dialogue-box {
+  position: relative;
+  width: 100%;
+  background: rgba(11, 11, 14, 0.92);
+  border: 2px solid var(--manga-paper);
+  box-shadow:
+    8px 8px 0px var(--blood-red),
+    0 20px 50px rgba(0, 0, 0, 0.85);
+  padding: 1.85rem 2.25rem 1.75rem;
+  backdrop-filter: blur(6px);
+}
+
+/* Etiqueta del hablante estilo viñeta de manga */
+.vn-speaker-tag {
+  position: absolute;
+  top: -16px;
+  left: 24px;
+  background-color: var(--blood-red);
+  color: #ffffff;
+  font-family: var(--font-hacker);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  padding: 0.25rem 0.9rem;
+  border: 2px solid var(--manga-paper);
+  box-shadow: 3px 3px 0px #000000;
+  text-transform: uppercase;
+}
+
+/* Esquinas decorativas de viñeta manga */
+.vn-dialogue-box::after {
+  content: '▼';
+  position: absolute;
+  bottom: 12px;
+  right: 18px;
+  font-size: 0.75rem;
+  color: var(--terminal-green);
+  animation: cursor-blink 1s steps(2, start) infinite;
+}
+
+.vn-dialogue-text {
+  font-family: var(--font-manga-dialogue);
+  font-size: clamp(1.1rem, 1.8vw, 1.35rem);
+  line-height: 1.65;
+  color: var(--manga-paper);
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  text-shadow: 1px 1px 0px #000000;
+}
+
+.vn-dialogue-text .highlight-ecorp {
+  color: var(--blood-red);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   BOTÓN PARPADEANTE ESTILO TERMINAL: [ INICIAR CONEXIÓN ]
+   ========================================================================== */
+.terminal-start-btn {
+  font-family: var(--font-hacker);
+  font-size: clamp(0.95rem, 1.4vw, 1.15rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--terminal-green);
+  background-color: rgba(8, 12, 10, 0.92);
+  border: 2px solid var(--terminal-green);
+  padding: 0.9rem 2.2rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow:
+    0 0 18px rgba(0, 255, 65, 0.28),
+    inset 0 0 12px rgba(0, 255, 65, 0.12);
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  animation: terminal-pulse 1.6s infinite ease-in-out;
+  white-space: nowrap;
+}
+
+.terminal-start-btn:hover,
+.terminal-start-btn:focus-visible {
+  background-color: var(--terminal-green);
+  color: #050806;
+  box-shadow:
+    0 0 28px rgba(0, 255, 65, 0.75),
+    4px 4px 0px var(--blood-red);
+  transform: translateY(-2px);
+  animation: none;
+  outline: none;
+}
+
+.terminal-start-btn:active {
+  transform: translateY(1px);
+}
+
+@keyframes terminal-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 18px rgba(0, 255, 65, 0.32), inset 0 0 10px rgba(0, 255, 65, 0.14);
+  }
+  50% {
+    opacity: 0.45;
+    box-shadow: 0 0 4px rgba(0, 255, 65, 0.08), inset 0 0 2px rgba(0, 255, 65, 0.04);
+  }
+}
+
+@keyframes cursor-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Contenedor de botones inferiores ([ INICIAR CONEXIÓN ] + [ VER MISIÓN ]) */
+.vn-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+/* Botón [ VER MISIÓN ] */
+.terminal-mission-btn {
+  font-family: var(--font-hacker);
+  font-size: clamp(0.95rem, 1.4vw, 1.15rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--manga-paper);
+  background-color: rgba(11, 11, 14, 0.92);
+  border: 2px solid var(--blood-red);
+  padding: 0.9rem 2.2rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0px var(--blood-red);
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+
+.terminal-mission-btn:hover,
+.terminal-mission-btn:focus-visible {
+  background-color: var(--blood-red);
+  color: #ffffff;
+  box-shadow: 0 0 22px var(--blood-red-glow), 4px 4px 0px var(--terminal-green);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+/* ==========================================================================
+   VENTANA MODAL DE INSTRUCCIONES (#mission-modal)
+   ========================================================================== */
+.mission-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+}
+
+.mission-modal-overlay.open {
+  display: flex;
+}
+
+.mission-modal-box {
+  width: 100%;
+  max-width: 600px;
+  background-color: #0b0b0e;
+  border: 2px solid var(--terminal-green);
+  box-shadow:
+    8px 8px 0px var(--blood-red),
+    0 0 30px rgba(0, 255, 65, 0.2);
+  padding: 2rem;
+  font-family: var(--font-hacker);
+  color: var(--manga-paper);
+  text-align: left;
+}
+
+.mission-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.35);
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.mission-modal-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--terminal-green);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.mission-modal-text {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--manga-paper);
+  margin-bottom: 1.75rem;
+  white-space: pre-line;
+}
+
+.mission-briefing-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.mission-briefing-list li strong {
+  color: var(--terminal-green);
+}
+
+.mission-close-btn {
+  font-family: var(--font-hacker);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--blood-red);
+  background-color: transparent;
+  border: 2px solid var(--blood-red);
+  padding: 0.65rem 1.4rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mission-close-btn:hover,
+.mission-close-btn:focus-visible {
+  background-color: var(--blood-red);
+  color: #ffffff;
+  box-shadow: 0 0 16px var(--blood-red-glow);
+  outline: none;
+}
+
+/* Cortina de fundido a negro para transición entre escenas */
+#fade-curtain {
+  position: absolute;
+  inset: 0;
+  background-color: #000000;
+  z-index: 25;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#fade-curtain.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ==========================================================================
+   ESCENA 1 Y TERMINAL FLOTANTE (#kali-terminal)
+   ========================================================================== */
+#scene-1 {
+  position: relative;
+  z-index: 15;
+  width: 100%;
+  height: 100%;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#kali-terminal {
+  position: absolute;
+  top: 12%;
+  left: 8%;
+  width: min(740px, 90vw);
+  height: 440px;
+  min-width: 340px;
+  min-height: 220px;
+  max-width: 96vw;
+  max-height: 90vh;
+  background-color: rgba(0, 0, 0, 0.9);
+  border: 1px solid #333338;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 255, 0, 0.14);
+  display: flex;
+  flex-direction: column;
+  resize: both;
+  overflow: hidden;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  color: #00ff00;
+  z-index: 30;
+}
+
+/* Barra superior (header) gris oscuro arrastrable */
+#kali-header {
+  flex-shrink: 0;
+  background-color: #26262b;
+  border-bottom: 1px solid #3a3a42;
+  padding: 0.55rem 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#kali-header:active {
+  cursor: grabbing;
+}
+
+.kali-window-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.kali-btn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.kali-btn.close {
+  background-color: #ff5f56;
+}
+
+.kali-btn.minimize {
+  background-color: #ffbd2e;
+}
+
+.kali-btn.maximize {
+  background-color: #27c93f;
+}
+
+.kali-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #d4d4d8;
+  letter-spacing: 0.05em;
+}
+
+.kali-header-spacer {
+  width: 48px;
+}
+
+/* Área de salida de texto con scroll y selección de texto habilitada */
+#terminal-output {
+  flex-grow: 1;
+  min-height: 0;
+  padding: 1rem 1.15rem;
+  overflow-y: auto;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #00ff00;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.terminal-line {
+  margin-bottom: 0.4rem;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.terminal-line.cmd-echo {
+  color: #e4e4e7;
+}
+
+.terminal-line.system-success {
+  color: #00ff00;
+  font-weight: 700;
+  border: 1px solid #00ff00;
+  background-color: rgba(0, 255, 0, 0.1);
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.65rem;
+  text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+}
+
+/* Contenedor con scroll propio para la salida del comando logdump */
+.terminal-logdump-container {
+  margin: 0.55rem 0 0.75rem;
+  border: 1px solid rgba(0, 255, 65, 0.45);
+  background-color: rgba(4, 10, 6, 0.92);
+  box-shadow: inset 0 0 18px rgba(0, 255, 65, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.terminal-logdump-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.7rem;
+  background-color: rgba(0, 255, 65, 0.14);
+  border-bottom: 1px solid rgba(0, 255, 65, 0.35);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #00ff41;
+  user-select: none;
+}
+
+.terminal-logdump-scroll {
+  max-height: 210px;
+  overflow-y: auto;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #b8f5c8;
+  white-space: pre;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #00ff41 rgba(0, 20, 6, 0.8);
+}
+
+.terminal-logdump-scroll::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.terminal-logdump-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 15, 5, 0.85);
+}
+
+.terminal-logdump-scroll::-webkit-scrollbar-thumb {
+  background-color: #00ff41;
+  border-radius: 2px;
+}
+
+/* Área de entrada */
+.terminal-input-row {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.15rem 0.85rem;
+  border-top: 1px solid rgba(0, 255, 0, 0.18);
+  background-color: rgba(0, 0, 0, 0.45);
+}
+
+.terminal-prompt {
+  color: #00ff00;
+  font-weight: 700;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+#terminal-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #00ff00;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.88rem;
+  caret-color: #00ff00;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* ==========================================================================
+   FILTRO VISUAL CRT (.crt-effect) APLICADO A #kali-terminal
+   Scanlines animadas, resplandor de fósforo verde y parpadeo de alta frecuencia
+   ========================================================================== */
+#kali-terminal.crt-effect {
+  text-shadow:
+    0 0 4px rgba(0, 255, 65, 0.75),
+    0 0 10px rgba(0, 255, 0, 0.35);
+  animation: crt-flicker 0.11s infinite;
+}
+
+/* Haz de refresco vertical sutil de monitor CRT (::before) */
+#kali-terminal.crt-effect::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 39;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 255, 65, 0) 0%,
+    rgba(0, 255, 65, 0.045) 48%,
+    rgba(0, 255, 65, 0.11) 50%,
+    rgba(0, 255, 65, 0.03) 52%,
+    rgba(0, 255, 65, 0) 100%
+  );
+  background-size: 100% 180%;
+  animation: crt-beam-sweep 6s linear infinite;
+}
+
+/* Líneas de escaneo (scanlines) animadas + viñeta interior de tubo (::after) */
+#kali-terminal.crt-effect::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 24, 6, 0.34) 2px,
+    rgba(0, 0, 0, 0.46) 4px
+  );
+  background-size: 100% 4px;
+  box-shadow:
+    inset 0 0 32px rgba(0, 255, 65, 0.1),
+    inset 0 0 65px rgba(0, 0, 0, 0.55);
+  animation: crt-scanlines-scroll 0.35s linear infinite;
+}
+
+#kali-terminal.crt-effect #terminal-output,
+#kali-terminal.crt-effect .terminal-prompt,
+#kali-terminal.crt-effect #terminal-input {
+  text-shadow:
+    0 0 4px rgba(0, 255, 65, 0.75),
+    0 0 9px rgba(0, 255, 0, 0.32);
+}
+
+#kali-terminal.crt-effect #terminal-input:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+@keyframes crt-scanlines-scroll {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 4px;
+  }
+}
+
+@keyframes crt-beam-sweep {
+  0% {
+    background-position: 0 -100%;
+  }
+  100% {
+    background-position: 0 200%;
+  }
+}
+
+@keyframes crt-flicker {
+  0% {
+    opacity: 0.985;
+  }
+  20% {
+    opacity: 0.965;
+  }
+  40% {
+    opacity: 0.995;
+  }
+  60% {
+    opacity: 0.97;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.978;
+  }
+}
+
+/* ==========================================================================
+   TEMPORIZADOR DE SPEEDRUN (#uptime-hud) Y NIVEL DE ALERTA IDS (#allsafe-ids-hud)
+   ========================================================================== */
+#uptime-hud {
+  position: fixed;
+  top: 16px;
+  left: 20px;
+  z-index: 40;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #00ff41;
+  background-color: rgba(5, 8, 6, 0.94);
+  border: 1px solid #00ff41;
+  padding: 0.48rem 0.9rem;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.65);
+  box-shadow:
+    0 0 14px rgba(0, 255, 65, 0.2),
+    3px 3px 0px var(--blood-red);
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+  min-width: 310px;
+}
+
+.hud-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.hud-score-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+#score-display {
+  color: #f4f1ea;
+  background-color: rgba(0, 255, 65, 0.12);
+  border: 1px solid rgba(0, 255, 65, 0.55);
+  padding: 0.1rem 0.48rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.55);
+}
+
+.score-delta-pill {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 0.08rem 0.36rem;
+  border: 1px solid currentColor;
+  animation: score-delta-pop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  white-space: nowrap;
+}
+
+.score-delta-pill.positive {
+  color: #00ff41;
+  background-color: rgba(0, 255, 65, 0.18);
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);
+}
+
+.score-delta-pill.negative {
+  color: #ff0033;
+  background-color: rgba(255, 0, 51, 0.18);
+  text-shadow: 0 0 6px rgba(255, 0, 51, 0.8);
+}
+
+@keyframes score-delta-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.hud-forensic-badge {
+  font-size: 0.64rem;
+  padding: 0.1rem 0.38rem;
+  border: 1px solid currentColor;
+  letter-spacing: 0.06em;
+}
+
+.hud-forensic-badge.ghost {
+  color: #00ff41;
+  background-color: rgba(0, 255, 65, 0.14);
+}
+
+.hud-forensic-badge.exposed {
+  color: #ffbd2e;
+  background-color: rgba(255, 189, 46, 0.12);
+}
+
+.ids-threat-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.26rem;
+  border-top: 1px solid rgba(0, 255, 65, 0.25);
+  padding-top: 0.36rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ids-threat-box.high-orange-state {
+  border-top-color: #ff6600;
+  box-shadow: 0 -4px 14px rgba(255, 102, 0, 0.22);
+}
+
+.ids-threat-box.locked-state {
+  border-top-color: rgba(255, 0, 51, 0.65);
+}
+
+.ids-threat-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+  flex-wrap: wrap;
+}
+
+.ids-threat-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.ids-mac-pill {
+  font-size: 0.6rem;
+  color: #a3a3ad;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 0.04rem 0.32rem;
+  letter-spacing: 0.05em;
+}
+
+.ids-status-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.ids-delta-pill {
+  font-size: 0.61rem;
+  font-weight: 700;
+  padding: 0.04rem 0.32rem;
+  border: 1px solid currentColor;
+  animation: score-delta-pop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  white-space: nowrap;
+}
+
+.ids-delta-pill.increase {
+  color: #ffbd2e;
+  background-color: rgba(255, 189, 46, 0.16);
+  text-shadow: 0 0 6px rgba(255, 189, 46, 0.75);
+}
+
+.ids-delta-pill.critical {
+  color: #ff6600;
+  background-color: rgba(255, 102, 0, 0.24);
+  border-color: #ff6600;
+  text-shadow: 0 0 8px rgba(255, 102, 0, 0.95);
+  animation: ids-aggressive-flicker 0.22s infinite;
+}
+
+.ids-delta-pill.reset {
+  color: #00ff41;
+  background-color: rgba(0, 255, 65, 0.16);
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);
+}
+
+.ids-threat-track {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  background-color: rgba(14, 18, 16, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ids-threat-track.high-orange-track {
+  border-color: #ff6600;
+  box-shadow:
+    0 0 12px rgba(255, 102, 0, 0.78),
+    inset 0 0 6px rgba(255, 94, 0, 0.45);
+  animation: ids-track-flicker 0.28s infinite;
+}
+
+.ids-threat-track.locked {
+  border-color: #ff0033;
+  box-shadow: 0 0 10px rgba(255, 0, 51, 0.65);
+}
+
+.ids-threat-ticks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(
+    to right,
+    transparent 24.5%,
+    rgba(0, 0, 0, 0.65) 25%,
+    transparent 25.5%,
+    transparent 49.5%,
+    rgba(0, 0, 0, 0.65) 50%,
+    transparent 50.5%,
+    transparent 79.5%,
+    rgba(255, 102, 0, 0.85) 80%,
+    transparent 80.5%
+  );
+}
+
+.ids-threat-fill {
+  height: 100%;
+  transition: width 0.22s ease-out, background-color 0.18s ease;
+}
+
+.ids-threat-fill.low {
+  background-color: #00ff41;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.7);
+}
+
+.ids-threat-fill.medium {
+  background-color: #ffbd2e;
+  box-shadow: 0 0 8px rgba(255, 189, 46, 0.75);
+}
+
+.ids-threat-fill.high {
+  background-color: #ff5f00;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #ff5500,
+    #ff5500 6px,
+    #ff8800 6px,
+    #ff8800 12px
+  );
+  box-shadow:
+    0 0 16px rgba(255, 102, 0, 0.98),
+    0 0 28px rgba(255, 69, 0, 0.75);
+  animation: ids-aggressive-flicker 0.16s infinite;
+}
+
+.ids-threat-fill.locked-fill {
+  background-color: #ff0033;
+  box-shadow: 0 0 14px rgba(255, 0, 51, 0.95);
+  animation: ids-pulse-alert 0.45s infinite alternate;
+}
+
+.ids-value-flicker {
+  color: #ff6a00;
+  text-shadow:
+    0 0 8px rgba(255, 106, 0, 0.95),
+    0 0 16px rgba(255, 69, 0, 0.7);
+  animation: ids-aggressive-flicker 0.2s infinite;
+}
+
+.ids-lockdown-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background-color: rgba(217, 20, 36, 0.22);
+  border: 1px solid #ff0033;
+  color: #ffdddf;
+  font-size: 0.63rem;
+  padding: 0.22rem 0.42rem;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 5px rgba(255, 0, 51, 0.85);
+  animation: ids-pulse-alert 0.65s infinite alternate;
+}
+
+.ids-lockdown-cmd-btn {
+  background-color: rgba(0, 0, 0, 0.75);
+  border: 1px solid #00ff41;
+  color: #00ff41;
+  font-family: inherit;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.08rem 0.35rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ids-lockdown-cmd-btn:hover {
+  background-color: #00ff41;
+  color: #050806;
+}
+
+@keyframes ids-pulse-alert {
+  from {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ids-aggressive-flicker {
+  0% {
+    opacity: 1;
+    filter: brightness(1.25) saturate(1.35);
+  }
+  18% {
+    opacity: 0.28;
+    filter: brightness(0.85);
+  }
+  34% {
+    opacity: 1;
+    filter: brightness(1.4) drop-shadow(0 0 8px rgba(255, 106, 0, 0.95));
+  }
+  52% {
+    opacity: 0.18;
+    filter: brightness(0.75);
+  }
+  68% {
+    opacity: 0.95;
+    filter: brightness(1.3);
+  }
+  84% {
+    opacity: 0.35;
+    filter: brightness(0.9);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1.35) saturate(1.4);
+  }
+}
+
+@keyframes ids-track-flicker {
+  0%,
+  100% {
+    border-color: #ff6600;
+    box-shadow: 0 0 12px rgba(255, 102, 0, 0.85);
+  }
+  45% {
+    border-color: rgba(255, 136, 0, 0.35);
+    box-shadow: 0 0 3px rgba(255, 102, 0, 0.25);
+  }
+  70% {
+    border-color: #ff8800;
+    box-shadow: 0 0 16px rgba(255, 120, 0, 0.95);
+  }
+}
+
+/* ==========================================================================
+   TERCERA MICRO-VENTANA FLOTANTE: MINI-WIRESHARK / TCPDUMP (#packet-sniffer)
+   ========================================================================== */
+#packet-sniffer {
+  position: absolute;
+  bottom: 4%;
+  right: 4%;
+  width: 430px;
+  min-width: 310px;
+  min-height: 180px;
+  max-width: 94vw;
+  max-height: 80vh;
+  background-color: rgba(6, 9, 13, 0.95);
+  border: 1px solid #333338;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.92),
+    0 0 18px rgba(0, 255, 65, 0.14);
+  display: flex;
+  flex-direction: column;
+  resize: both;
+  overflow: hidden;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  color: #e4e4e7;
+  z-index: 33;
+  user-select: none;
+}
+
+#packet-sniffer.minimized {
+  height: auto !important;
+  min-height: 0 !important;
+  resize: none;
+}
+
+#packet-sniffer.minimized .sniffer-body {
+  display: none;
+}
+
+#packet-sniffer-header {
+  flex-shrink: 0;
+  background-color: #1f242b;
+  border-bottom: 1px solid #3a3a42;
+  padding: 0.45rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: grab;
+}
+
+#packet-sniffer-header:active {
+  cursor: grabbing;
+}
+
+.sniffer-body {
+  flex-grow: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.6rem 0.75rem;
+  gap: 0.5rem;
+  background-color: #05070a;
+  overflow: hidden;
+}
+
+.sniffer-packet-list {
+  max-height: 105px;
+  overflow-y: auto;
+  border: 1px solid rgba(0, 255, 65, 0.28);
+  background-color: rgba(8, 14, 10, 0.9);
+  font-size: 0.68rem;
+}
+
+.sniffer-packet-row {
+  display: grid;
+  grid-template-columns: 42px 86px 86px 46px 1fr;
+  gap: 0.35rem;
+  padding: 0.24rem 0.45rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sniffer-packet-row:hover {
+  background-color: rgba(0, 255, 65, 0.12);
+}
+
+.sniffer-packet-row.selected {
+  background-color: rgba(0, 255, 65, 0.22);
+  color: #00ff41;
+  font-weight: 700;
+}
+
+.sniffer-packet-row.evil-portal-hit {
+  color: #ff5f56;
+}
+
+.sniffer-hex-pane {
+  flex: 1;
+  min-height: 72px;
+  overflow: auto;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(217, 20, 36, 0.45);
+  background-color: #030507;
+  font-size: 0.68rem;
+  line-height: 1.42;
+  color: #a7f3d0;
+  white-space: pre;
+  user-select: text;
+}
+
+/* ==========================================================================
+   ESCENA 6: SECUENCIA DE VICTORIA (WIN SCREEN + EFECTO GLITCH)
+   ========================================================================== */
+.win-screen-container {
+  position: relative;
+  z-index: 35;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, rgba(20, 5, 8, 0.88) 0%, rgba(5, 5, 7, 0.96) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  gap: 2.8rem;
+  animation: win-fade-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.win-glitch-text {
+  position: relative;
+  font-family: var(--font-hacker);
+  font-size: clamp(2rem, 5vw, 4.4rem);
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: 0.1em;
+  color: var(--blood-red);
+  text-transform: uppercase;
+  white-space: pre-line;
+  text-shadow:
+    0 0 18px rgba(217, 20, 36, 0.85),
+    0 0 42px rgba(217, 20, 36, 0.45),
+    4px 4px 0px #000000;
+  animation: win-glitch-skew 2.5s infinite linear alternate-reverse;
+}
+
+.win-glitch-text::before,
+.win-glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  white-space: pre-line;
+  pointer-events: none;
+}
+
+.win-glitch-text::before {
+  left: 4px;
+  text-shadow: -3px 0 #00ff41;
+  clip-path: polygon(0 0, 100% 0, 100% 38%, 0 38%);
+  animation: win-glitch-1 2s infinite linear alternate-reverse;
+}
+
+.win-glitch-text::after {
+  left: -4px;
+  text-shadow: 3px 0 #ffffff;
+  clip-path: polygon(0 62%, 100% 62%, 100% 100%, 0 100%);
+  animation: win-glitch-2 2.4s infinite linear alternate-reverse;
+}
+
+.win-actions-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.15rem;
+  width: min(620px, 94vw);
+}
+
+.win-report-panel {
+  width: 100%;
+  background-color: rgba(8, 10, 12, 0.94);
+  border: 2px solid var(--terminal-green);
+  box-shadow:
+    0 0 24px rgba(0, 255, 65, 0.2),
+    6px 6px 0px var(--blood-red);
+  padding: 1.25rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+  text-align: left;
+}
+
+.win-report-content-grid {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+}
+
+.win-report-logo {
+  width: 82px;
+  height: 142px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--terminal-green);
+  box-shadow:
+    0 0 12px rgba(0, 255, 65, 0.25),
+    3px 3px 0px var(--blood-red);
+}
+
+.win-report-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.win-telemetry-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.25);
+  padding-bottom: 0.65rem;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.8rem;
+  color: var(--terminal-green);
+  letter-spacing: 0.08em;
+}
+
+.win-alias-label {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--manga-paper);
+  text-transform: uppercase;
+  display: block;
+}
+
+.win-alias-input {
+  width: 100%;
+  background-color: #050608;
+  border: 2px solid var(--terminal-green);
+  color: var(--terminal-green);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.65rem 0.9rem;
+  outline: none;
+  box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.15);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.win-alias-input:focus {
+  border-color: var(--blood-red);
+  box-shadow:
+    inset 0 0 12px rgba(217, 20, 36, 0.25),
+    0 0 12px rgba(217, 20, 36, 0.4);
+}
+
+.win-restart-btn {
+  font-family: var(--font-hacker);
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--terminal-green);
+  background-color: rgba(8, 12, 10, 0.94);
+  border: 2px solid var(--terminal-green);
+  padding: 1rem 2.6rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow:
+    0 0 22px rgba(0, 255, 65, 0.35),
+    4px 4px 0px var(--blood-red);
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.win-restart-btn:hover,
+.win-restart-btn:focus-visible {
+  background-color: var(--terminal-green);
+  color: #050806;
+  box-shadow:
+    0 0 32px rgba(0, 255, 65, 0.85),
+    6px 6px 0px var(--blood-red);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.win-report-btn {
+  width: 100%;
+  font-family: var(--font-hacker);
+  font-size: clamp(0.92rem, 1.3vw, 1.08rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--manga-paper);
+  background-color: rgba(14, 8, 10, 0.94);
+  border: 2px solid var(--blood-red);
+  padding: 0.88rem 1.6rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow:
+    0 0 18px rgba(217, 20, 36, 0.35),
+    4px 4px 0px var(--terminal-green);
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.win-report-btn:hover,
+.win-report-btn:focus-visible {
+  background-color: var(--blood-red);
+  color: #ffffff;
+  box-shadow:
+    0 0 28px rgba(217, 20, 36, 0.85),
+    6px 6px 0px var(--terminal-green);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+@keyframes win-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes win-glitch-1 {
+  0%, 75%, 100% {
+    transform: translate(0);
+    clip-path: polygon(0 0, 100% 0, 100% 36%, 0 36%);
+  }
+  80% {
+    transform: translate(-6px, 2px);
+    clip-path: polygon(0 10%, 100% 10%, 100% 45%, 0 45%);
+  }
+  88% {
+    transform: translate(6px, -2px);
+    clip-path: polygon(0 40%, 100% 40%, 100% 72%, 0 72%);
+  }
+  94% {
+    transform: translate(-3px, 1px);
+  }
+}
+
+@keyframes win-glitch-2 {
+  0%, 72%, 100% {
+    transform: translate(0);
+    clip-path: polygon(0 62%, 100% 62%, 100% 100%, 0 100%);
+  }
+  78% {
+    transform: translate(5px, -2px);
+    clip-path: polygon(0 50%, 100% 50%, 100% 88%, 0 88%);
+  }
+  86% {
+    transform: translate(-5px, 2px);
+    clip-path: polygon(0 18%, 100% 18%, 100% 54%, 0 54%);
+  }
+}
+
+@keyframes win-glitch-skew {
+  0%, 90%, 100% {
+    transform: skew(0deg);
+  }
+  92% {
+    transform: skew(-2deg);
+  }
+  95% {
+    transform: skew(2deg);
+  }
+}
+
+/* ==========================================================================
+   SEGUNDA VENTANA FLOTANTE: NETWORK TOPOLOGY (#network-map)
+   ========================================================================== */
+#network-map {
+  position: absolute;
+  top: 12%;
+  right: 3%;
+  width: 390px;
+  min-width: 310px;
+  min-height: 240px;
+  max-width: 92vw;
+  max-height: 85vh;
+  background-color: rgba(8, 10, 14, 0.95);
+  border: 1px solid #333338;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.92),
+    0 0 18px rgba(0, 255, 0, 0.14);
+  display: flex;
+  flex-direction: column;
+  resize: both;
+  overflow: hidden;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  color: #e4e4e7;
+  z-index: 32;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Estado minimizado (.minimized): Oculta el cuerpo y muestra únicamente la barra superior */
+#network-map.minimized {
+  height: auto !important;
+  min-height: 0 !important;
+  resize: none;
+}
+
+#network-map.minimized .network-grid-body {
+  display: none;
+}
+
+#network-map.minimized #network-map-header {
+  border-bottom: none;
+}
+
+#network-map-header {
+  flex-shrink: 0;
+  background-color: #26262b;
+  border-bottom: 1px solid #3a3a42;
+  padding: 0.48rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: grab;
+}
+
+#network-map-header:active {
+  cursor: grabbing;
+}
+
+/* Botón [-] para minimizar/restaurar en el header del mapa */
+#minimize-map-btn {
+  background-color: transparent;
+  border: 1px solid #52525b;
+  color: #00ff41;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.18rem 0.42rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+#minimize-map-btn:hover {
+  background-color: #00ff41;
+  color: #050806;
+  border-color: #00ff41;
+}
+
+/* Fondo de cuadrícula oscura adaptable al redimensionado */
+.network-grid-body {
+  flex-grow: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.75rem 0.85rem 0.85rem;
+  background-color: #07090c;
+  background-image:
+    linear-gradient(to right, rgba(0, 255, 65, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 255, 65, 0.07) 1px, transparent 1px);
+  background-size: 18px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.topology-subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.12);
+  padding-bottom: 0.35rem;
+}
+
+/* Lienzo interactivo D3.js para la topología de red */
+.d3-topology-stage {
+  position: relative;
+  width: 100%;
+  min-height: 175px;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 255, 65, 0.06) 0%, rgba(4, 6, 9, 0.9) 80%);
+  border: 1px solid rgba(0, 255, 65, 0.22);
+  overflow: hidden;
+}
+
+#d3-topology-svg {
+  width: 100%;
+  height: 180px;
+  display: block;
+  cursor: grab;
+}
+
+#d3-topology-svg:active {
+  cursor: grabbing;
+}
+
+.d3-link {
+  stroke: rgba(255, 0, 51, 0.42);
+  stroke-width: 1.8px;
+  transition: stroke 0.3s ease;
+}
+
+.d3-link.secondary {
+  stroke: rgba(255, 0, 51, 0.22);
+  stroke-dasharray: 3 4;
+  stroke-width: 1.2px;
+}
+
+.d3-link.compromised {
+  stroke: #00ff00;
+  stroke-width: 2.2px;
+  stroke-dasharray: 6 4;
+  filter: drop-shadow(0 0 5px rgba(0, 255, 0, 0.85));
+  animation: d3-link-packet-flow 0.75s linear infinite;
+}
+
+.d3-node-group {
+  cursor: pointer;
+}
+
+.d3-node-core {
+  fill: rgba(255, 0, 51, 0.2);
+  stroke: #ff0033;
+  stroke-width: 2px;
+  transition: fill 0.25s ease, stroke 0.25s ease;
+}
+
+.d3-node-group.active-target .d3-node-core {
+  stroke: #ffbd2e;
+  stroke-dasharray: 4 2;
+  fill: rgba(255, 189, 46, 0.22);
+}
+
+/* Parpadeo en verde brillante cuando el nodo está comprometido */
+.d3-node-group.compromised .d3-node-core {
+  fill: rgba(0, 255, 0, 0.28);
+  stroke: #00ff00;
+  stroke-dasharray: none;
+  animation: d3-compromised-green-blink 0.85s infinite ease-in-out;
+}
+
+.d3-node-halo {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 1.6px;
+  pointer-events: none;
+}
+
+.d3-node-group.compromised .d3-node-halo {
+  stroke: #00ff00;
+  animation: d3-halo-green-pulse 1.15s infinite ease-out;
+}
+
+.d3-node-group.active-target:not(.compromised) .d3-node-halo {
+  stroke: rgba(255, 189, 46, 0.75);
+  stroke-dasharray: 3 3;
+  animation: d3-halo-amber-pulse 1.4s infinite ease-in-out;
+}
+
+.d3-node-code {
+  font-family: 'Fira Code', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  fill: #ff5f56;
+  pointer-events: none;
+}
+
+.d3-node-group.compromised .d3-node-code {
+  fill: #00ff00;
+  animation: d3-compromised-text-blink 0.85s infinite ease-in-out;
+}
+
+.d3-node-group.active-target:not(.compromised) .d3-node-code {
+  fill: #ffbd2e;
+}
+
+.d3-node-caption {
+  font-family: 'Fira Code', monospace;
+  font-size: 8.5px;
+  font-weight: 600;
+  fill: #d4d4d8;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.d3-node-group.compromised .d3-node-caption {
+  fill: #00ff00;
+  text-shadow: 0 0 6px rgba(0, 255, 0, 0.85);
+}
+
+.d3-node-ip-tag {
+  font-family: 'Fira Code', monospace;
+  font-size: 7px;
+  fill: #71717a;
+  pointer-events: none;
+}
+
+.d3-node-group.compromised .d3-node-ip-tag {
+  fill: #86efac;
+}
+
+@keyframes d3-compromised-green-blink {
+  0%,
+  100% {
+    fill: rgba(0, 255, 0, 0.22);
+    stroke: #00ff00;
+    filter: drop-shadow(0 0 5px #00ff00);
+  }
+  50% {
+    fill: rgba(0, 255, 65, 0.68);
+    stroke: #b8ffcc;
+    filter: drop-shadow(0 0 14px #00ff00) drop-shadow(0 0 22px rgba(0, 255, 65, 0.95));
+  }
+}
+
+@keyframes d3-compromised-text-blink {
+  0%,
+  100% {
+    fill: #00ff00;
+  }
+  50% {
+    fill: #041208;
+  }
+}
+
+@keyframes d3-halo-green-pulse {
+  0% {
+    r: 16px;
+    opacity: 0.95;
+    stroke-width: 2.2px;
+  }
+  100% {
+    r: 26px;
+    opacity: 0;
+    stroke-width: 0.6px;
+  }
+}
+
+@keyframes d3-halo-amber-pulse {
+  0%,
+  100% {
+    r: 17px;
+    opacity: 0.35;
+  }
+  50% {
+    r: 21px;
+    opacity: 0.9;
+  }
+}
+
+@keyframes d3-link-packet-flow {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Contenedor compacto de los 5 nodos sincronizados debajo del grafo D3 */
+.topology-nodes-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.1rem 0.15rem;
+}
+
+.net-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28rem;
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+}
+
+/* Círculo CSS del nodo: Rojo (#ff0033) por defecto */
+.net-node-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: rgba(255, 0, 51, 0.16);
+  border: 2px solid #ff0033;
+  box-shadow: 0 0 10px rgba(255, 0, 51, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #ff0033;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Nodo vulnerado: Parpadeo en verde brillante (#00ff00) */
+.net-node.compromised .net-node-circle {
+  background-color: rgba(0, 255, 0, 0.25);
+  border-color: #00ff00;
+  color: #00ff00;
+  animation: node-pulse 0.85s infinite ease-in-out;
+}
+
+/* Nodo objetivo actual (en curso) */
+.net-node.active-target .net-node-circle {
+  border-style: dashed;
+}
+
+.net-node-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #d4d4d8;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.net-node.compromised .net-node-label {
+  color: #00ff00;
+  text-shadow: 0 0 6px rgba(0, 255, 0, 0.5);
+}
+
+/* Línea fina de conexión entre nodos */
+.net-connector {
+  flex: 1;
+  height: 2px;
+  background-color: rgba(255, 0, 51, 0.45);
+  margin: 0 2px;
+  margin-bottom: 0.95rem;
+  transition: background-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.net-connector.compromised {
+  background-color: #00ff00;
+  box-shadow: 0 0 8px #00ff00;
+}
+
+@keyframes node-pulse {
+  0%, 100% {
+    background-color: rgba(0, 255, 0, 0.2);
+    box-shadow:
+      0 0 6px #00ff00,
+      0 0 12px rgba(0, 255, 0, 0.45);
+    transform: scale(1);
+  }
+  50% {
+    background-color: rgba(0, 255, 0, 0.55);
+    box-shadow:
+      0 0 16px #00ff00,
+      0 0 28px rgba(0, 255, 0, 0.95);
+    transform: scale(1.09);
+  }
+}
+
+.topology-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.62rem;
+  color: #a1a1aa;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-dot.locked {
+  background-color: #ff0033;
+  box-shadow: 0 0 6px #ff0033;
+}
+
+.legend-dot.owned {
+  background-color: #00ff00;
+  box-shadow: 0 0 6px #00ff00;
+  animation: node-pulse 0.85s infinite ease-in-out;
+}
+
+/* ==========================================================================
+   MOTOR DE PARANOIA: MICRO-GLITCHES Y DESENFOQUE PSICOLÓGICO
+   ========================================================================== */
+@keyframes glitch-screen {
+  0% {
+    transform: translate(0, 0) skew(0deg);
+    filter: none;
+  }
+  20% {
+    transform: translate(-6px, 3px) skew(-2deg);
+    filter: drop-shadow(-4px 0 0 #ff0033) drop-shadow(4px 0 0 #00ffff);
+  }
+  45% {
+    transform: translate(6px, -4px) skew(3deg);
+    filter: invert(1) contrast(1.8) hue-rotate(90deg);
+  }
+  70% {
+    transform: translate(-4px, -2px) skew(-1.5deg);
+    filter: drop-shadow(5px 0 0 #ff0033) drop-shadow(-5px 0 0 #00ff41);
+  }
+  100% {
+    transform: translate(0, 0) skew(0deg);
+    filter: none;
+  }
+}
+
+body.paranoia-glitch-active {
+  animation: glitch-screen 0.2s steps(2, end) forwards;
+  overflow: hidden;
+}
+
+/* Transición progresiva para el desenfoque de #kali-terminal */
+#kali-terminal {
+  transition: filter 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#kali-terminal.paranoia-blur-active {
+  filter: blur(2px);
+  transition: filter 0.18s ease-out;
+}
+
+/* Línea fantasma efímera ("WAKE UP" / "HE IS WATCHING") */
+.terminal-line.phantom-hallucination {
+  color: #ff0033;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-shadow:
+    -2px 0 #00ffff,
+    2px 0 #ff0033;
+}
+
+/* ==========================================================================
+   CHAT IRC FLOTANTE Y ACOPLABLE (#fsociety-irc)
+   ========================================================================== */
+#fsociety-irc {
+  position: absolute;
+  width: 370px;
+  min-width: 290px;
+  min-height: 190px;
+  max-width: 92vw;
+  max-height: 78vh;
+  height: 295px;
+  background-color: rgba(7, 9, 12, 0.95);
+  border: 1px solid #333338;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.92),
+    0 0 18px rgba(217, 20, 36, 0.16);
+  display: flex;
+  flex-direction: column;
+  resize: both;
+  overflow: hidden;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  color: #e4e4e7;
+  z-index: 34;
+  user-select: none;
+}
+
+#fsociety-irc.docked {
+  position: fixed !important;
+  left: auto !important;
+  top: auto !important;
+  right: 20px !important;
+  bottom: 20px !important;
+  border-color: var(--terminal-green);
+}
+
+#fsociety-irc.minimized {
+  height: auto !important;
+  min-height: 0 !important;
+  resize: none;
+}
+
+#fsociety-irc.minimized .irc-body {
+  display: none;
+}
+
+#fsociety-irc-header {
+  flex-shrink: 0;
+  background-color: #1c1f26;
+  border-bottom: 1px solid #3a3a42;
+  padding: 0.45rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  cursor: grab;
+}
+
+#fsociety-irc-header:active {
+  cursor: grabbing;
+}
+
+.irc-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.irc-header-btn {
+  background-color: transparent;
+  border: 1px solid #52525b;
+  color: #00ff41;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.16rem 0.36rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.irc-header-btn:hover {
+  background-color: #00ff41;
+  color: #050806;
+  border-color: #00ff41;
+}
+
+.irc-body {
+  flex-grow: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: #050608;
+  overflow: hidden;
+}
+
+.irc-topic-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.3rem 0.65rem;
+  background-color: rgba(217, 20, 36, 0.12);
+  border-bottom: 1px solid rgba(217, 20, 36, 0.35);
+  font-size: 0.64rem;
+  color: #d4d4d8;
+}
+
+.irc-users-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.25rem 0.65rem;
+  background-color: #090b10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 0.62rem;
+}
+
+.irc-messages-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.55rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+  font-size: 0.72rem;
+  line-height: 1.42;
+  user-select: text;
+}
+
+.irc-msg-row {
+  word-break: break-word;
+}
+
+.irc-msg-time {
+  color: #71717a;
+  margin-right: 0.35rem;
+  font-size: 0.64rem;
+}
+
+.irc-msg-sender {
+  font-weight: 700;
+  margin-right: 0.35rem;
+}
+
+.irc-msg-sender.darlene {
+  color: #00ff41;
+}
+
+.irc-msg-sender.mr_robot {
+  color: #ff0033;
+}
+
+.irc-msg-sender.romero {
+  color: #ffbd2e;
+}
+
+.irc-msg-sender.elliot {
+  color: #38bdf8;
+}
+
+.irc-msg-sender.system {
+  color: #a1a1aa;
+}
+
+.irc-input-form {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid #27272a;
+  background-color: #090b0e;
+  padding: 0.35rem 0.55rem;
+  gap: 0.4rem;
+}
+
+.irc-input-nick {
+  font-size: 0.68rem;
+  color: #38bdf8;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.irc-input-field {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f4f1ea;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+}
+
+/* ==========================================================================
+   MONÓLOGO INTERIOR DE ELLIOT (VOZ / SUBTÍTULOS NOVELA VISUAL #elliot-monologue)
+   ========================================================================== */
+#elliot-monologue {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 38;
+  width: min(740px, 90vw);
+  background: linear-gradient(180deg, rgba(8, 10, 14, 0.94) 0%, rgba(4, 5, 8, 0.98) 100%);
+  border: 1px solid rgba(244, 241, 234, 0.65);
+  border-left: 4px solid var(--blood-red);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.9),
+    4px 4px 0px rgba(0, 255, 65, 0.28);
+  padding: 0.7rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  animation: monologue-slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+#elliot-monologue.paranoia-tone {
+  border-left-color: #ff0033;
+  border-color: rgba(255, 0, 51, 0.75);
+  box-shadow:
+    0 0 24px rgba(255, 0, 51, 0.35),
+    4px 4px 0px #00ffff;
+}
+
+.monologue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.monologue-speaker-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #00ff41;
+  font-weight: 700;
+}
+
+#elliot-monologue.paranoia-tone .monologue-speaker-badge {
+  color: #ff0033;
+}
+
+.monologue-voice-wave {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+}
+
+.monologue-voice-wave span {
+  width: 2px;
+  background-color: currentColor;
+  animation: voice-bar-bounce 0.55s infinite ease-in-out alternate;
+}
+
+.monologue-voice-wave span:nth-child(1) {
+  height: 4px;
+  animation-delay: 0s;
+}
+.monologue-voice-wave span:nth-child(2) {
+  height: 9px;
+  animation-delay: 0.15s;
+}
+.monologue-voice-wave span:nth-child(3) {
+  height: 6px;
+  animation-delay: 0.3s;
+}
+
+@keyframes voice-bar-bounce {
+  from {
+    transform: scaleY(0.4);
+  }
+  to {
+    transform: scaleY(1.1);
+  }
+}
+
+.monologue-text {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: #f4f1ea;
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+@keyframes monologue-slide-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* ==========================================================================
+   SISTEMA DE RANGOS (S+, A, B, C), QR VECTORIAL Y LEADERBOARD SPEEDRUN TOP 5
+   ========================================================================== */
+.win-actions-stack {
+  width: min(780px, 95vw);
+}
+
+.win-rank-strip {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0.85rem;
+  background-color: rgba(5, 7, 10, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 0.75rem 0.9rem;
+}
+
+.win-rank-badge-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  padding: 0.45rem 0.7rem;
+  border: 2px solid #00ff41;
+  background-color: rgba(0, 255, 65, 0.08);
+  text-align: center;
+}
+
+.win-rank-badge-box.rank-s-plus {
+  border-color: #00ff41;
+  color: #00ff41;
+  background-color: rgba(0, 255, 65, 0.12);
+  box-shadow: 0 0 18px rgba(0, 255, 65, 0.35);
+}
+
+.win-rank-badge-box.rank-a {
+  border-color: #38bdf8;
+  color: #38bdf8;
+  background-color: rgba(56, 189, 248, 0.12);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.3);
+}
+
+.win-rank-badge-box.rank-b {
+  border-color: #ffbd2e;
+  color: #ffbd2e;
+  background-color: rgba(255, 189, 46, 0.12);
+  box-shadow: 0 0 16px rgba(255, 189, 46, 0.25);
+}
+
+.win-rank-badge-box.rank-c {
+  border-color: #ff0033;
+  color: #ff0033;
+  background-color: rgba(255, 0, 51, 0.12);
+  box-shadow: 0 0 16px rgba(255, 0, 51, 0.3);
+}
+
+.win-rank-label {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.win-rank-letter {
+  font-family: var(--font-hacker);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.05;
+  margin: 0.1rem 0;
+}
+
+.win-rank-score {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.win-metrics-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.75rem;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.7rem;
+  align-content: center;
+}
+
+.win-metric-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.2rem;
+}
+
+.win-qr-preview-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(0, 255, 65, 0.45);
+  background-color: #050608;
+  flex-shrink: 0;
+}
+
+.win-qr-caption {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.55rem;
+  color: #00ff41;
+  letter-spacing: 0.08em;
+}
+
+.win-rank-scale-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  background-color: rgba(8, 10, 14, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 0.45rem 0.75rem;
+  font-family: 'Fira Code', monospace;
+  flex-wrap: wrap;
+}
+
+.win-rank-tiers-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.win-rank-tier-chip {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.12rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #71717a;
+  background-color: rgba(255, 255, 255, 0.03);
+  letter-spacing: 0.06em;
+  transition: all 0.2s ease;
+}
+
+.win-rank-tier-chip.active.s-plus {
+  color: #050806;
+  background-color: #00ff41;
+  border-color: #00ff41;
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.8);
+}
+
+.win-rank-tier-chip.active.a {
+  color: #050806;
+  background-color: #38bdf8;
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+}
+
+.win-rank-tier-chip.active.b {
+  color: #050806;
+  background-color: #ffbd2e;
+  border-color: #ffbd2e;
+  box-shadow: 0 0 12px rgba(255, 189, 46, 0.8);
+}
+
+.win-rank-tier-chip.active.c {
+  color: #ffffff;
+  background-color: #ff0033;
+  border-color: #ff0033;
+  box-shadow: 0 0 12px rgba(255, 0, 51, 0.8);
+}
+
+.win-verdict-banner {
+  font-size: 0.68rem;
+  color: #d4d4d8;
+  font-style: italic;
+  letter-spacing: 0.03em;
+}
+
+/* Tabla de Clasificación Speedrun (Leaderboard Top 5) */
+.speedrun-leaderboard-panel {
+  width: 100%;
+  background-color: rgba(7, 9, 12, 0.94);
+  border: 1px solid rgba(244, 241, 234, 0.45);
+  border-left: 4px solid var(--blood-red);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.88);
+  padding: 0.85rem 1.05rem;
+  font-family: 'Fira Code', monospace;
+  text-align: left;
+}
+
+.scene0-leaderboard-floating {
+  position: absolute;
+  top: 72px;
+  left: 32px;
+  z-index: 28;
+  width: min(430px, 90vw);
+}
+
+.leaderboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.28);
+}
+
+.leaderboard-title {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #00ff41;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+}
+
+.leaderboard-table th {
+  text-align: left;
+  font-size: 0.62rem;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.35rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.leaderboard-table td {
+  padding: 0.32rem 0.35rem;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.07);
+  color: #e4e4e7;
+}
+
+.leaderboard-table tr.current-run-row td {
+  background-color: rgba(0, 255, 65, 0.1);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.rank-pill {
+  display: inline-block;
+  padding: 0.08rem 0.36rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  border: 1px solid currentColor;
+}
+
+.rank-pill.s-plus {
+  color: #00ff41;
+  background-color: rgba(0, 255, 65, 0.12);
+}
+
+.rank-pill.a {
+  color: #38bdf8;
+  background-color: rgba(56, 189, 248, 0.12);
+}
+
+.rank-pill.b {
+  color: #ffbd2e;
+  background-color: rgba(255, 189, 46, 0.12);
+}
+
+.rank-pill.c {
+  color: #ff0033;
+  background-color: rgba(255, 0, 51, 0.12);
+}
+
+@media (max-width: 768px) {
+  .win-rank-strip {
+    flex-direction: column;
+  }
+  .win-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  .scene0-leaderboard-floating {
+    position: static;
+    margin: 0.5rem auto;
+  }
+}
+
+/* ==========================================================================
+   PERFILES DE COLOR DE LA TERMINAL ('theme <name>') — SCOPED A #kali-terminal
+   Permite alternar entre 'Matrix', 'Dracula' y 'Monokai' sin alterar la
+   estética general del juego ni el HUD exterior.
+   ========================================================================== */
+
+/* 1. PERFIL MATRIX (Fósforo Verde Digital Profundo) */
+#kali-terminal.theme-matrix {
+  background-color: rgba(0, 10, 2, 0.93);
+  border-color: #00ff41;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.92),
+    0 0 24px rgba(0, 255, 65, 0.25);
+  color: #00ff41;
+}
+
+#kali-terminal.theme-matrix #kali-header {
+  background-color: #051609;
+  border-bottom-color: rgba(0, 255, 65, 0.4);
+}
+
+#kali-terminal.theme-matrix .kali-title {
+  color: #86efac;
+}
+
+#kali-terminal.theme-matrix #terminal-output {
+  color: #00ff41;
+  scrollbar-color: #00ff41 rgba(0, 20, 6, 0.85);
+}
+
+#kali-terminal.theme-matrix .terminal-line.cmd-echo {
+  color: #dcfce7;
+}
+
+#kali-terminal.theme-matrix .terminal-line.system-success {
+  color: #00ff41;
+  border-color: #00ff41;
+  background-color: rgba(0, 255, 65, 0.12);
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.65);
+}
+
+#kali-terminal.theme-matrix .terminal-input-row {
+  border-top-color: rgba(0, 255, 65, 0.28);
+  background-color: rgba(0, 12, 3, 0.65);
+}
+
+#kali-terminal.theme-matrix .terminal-prompt {
+  color: #4ade80;
+}
+
+#kali-terminal.theme-matrix #terminal-input {
+  color: #00ff41;
+  caret-color: #00ff41;
+}
+
+#kali-terminal.theme-matrix.crt-effect #terminal-output,
+#kali-terminal.theme-matrix.crt-effect .terminal-prompt,
+#kali-terminal.theme-matrix.crt-effect #terminal-input {
+  text-shadow:
+    0 0 5px rgba(0, 255, 65, 0.8),
+    0 0 11px rgba(0, 255, 0, 0.38);
+}
+
+/* 2. PERFIL DRACULA (Púrpura #bd93f9, Rosa #ff79c6, Cian #8be9fd, Verde #50fa7b sobre #282a36) */
+#kali-terminal.theme-dracula {
+  background-color: rgba(40, 42, 54, 0.94);
+  border-color: #bd93f9;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.92),
+    0 0 24px rgba(189, 147, 249, 0.26);
+  color: #f8f8f2;
+}
+
+#kali-terminal.theme-dracula #kali-header {
+  background-color: #1e1f29;
+  border-bottom-color: #6272a4;
+}
+
+#kali-terminal.theme-dracula .kali-title {
+  color: #bd93f9;
+}
+
+#kali-terminal.theme-dracula #terminal-output {
+  color: #8be9fd;
+  scrollbar-color: #bd93f9 #1e1f29;
+}
+
+#kali-terminal.theme-dracula .terminal-line.cmd-echo {
+  color: #bd93f9;
+}
+
+#kali-terminal.theme-dracula .terminal-line.system-success {
+  color: #50fa7b;
+  border-color: #50fa7b;
+  background-color: rgba(80, 250, 123, 0.12);
+  text-shadow: 0 0 8px rgba(80, 250, 123, 0.55);
+}
+
+#kali-terminal.theme-dracula .terminal-logdump-container {
+  border-color: rgba(189, 147, 249, 0.55);
+  background-color: rgba(30, 31, 41, 0.95);
+}
+
+#kali-terminal.theme-dracula .terminal-logdump-header {
+  background-color: rgba(189, 147, 249, 0.18);
+  border-bottom-color: rgba(189, 147, 249, 0.4);
+  color: #ff79c6;
+}
+
+#kali-terminal.theme-dracula .terminal-logdump-scroll {
+  color: #f8f8f2;
+  scrollbar-color: #bd93f9 #1e1f29;
+}
+
+#kali-terminal.theme-dracula .terminal-input-row {
+  border-top-color: rgba(189, 147, 249, 0.35);
+  background-color: rgba(25, 26, 34, 0.72);
+}
+
+#kali-terminal.theme-dracula .terminal-prompt {
+  color: #ff79c6;
+}
+
+#kali-terminal.theme-dracula #terminal-input {
+  color: #50fa7b;
+  caret-color: #ff79c6;
+}
+
+#kali-terminal.theme-dracula.crt-effect #terminal-output,
+#kali-terminal.theme-dracula.crt-effect .terminal-prompt,
+#kali-terminal.theme-dracula.crt-effect #terminal-input {
+  text-shadow:
+    0 0 4px rgba(189, 147, 249, 0.6),
+    0 0 9px rgba(139, 233, 253, 0.28);
+}
+
+#kali-terminal.theme-dracula.crt-effect::before {
+  background: linear-gradient(
+    to bottom,
+    rgba(189, 147, 249, 0) 0%,
+    rgba(189, 147, 249, 0.04) 48%,
+    rgba(255, 121, 198, 0.09) 50%,
+    rgba(189, 147, 249, 0.03) 52%,
+    rgba(189, 147, 249, 0) 100%
+  );
+  background-size: 100% 180%;
+}
+
+/* 3. PERFIL MONOKAI (Verde Lima #a6e22e, Magenta #f92672, Cian #66d9ef, Naranja #fd971f sobre #272822) */
+#kali-terminal.theme-monokai {
+  background-color: rgba(39, 40, 34, 0.94);
+  border-color: #a6e22e;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.92),
+    0 0 24px rgba(166, 226, 46, 0.22);
+  color: #f8f8f2;
+}
+
+#kali-terminal.theme-monokai #kali-header {
+  background-color: #1e1f1c;
+  border-bottom-color: #75715e;
+}
+
+#kali-terminal.theme-monokai .kali-title {
+  color: #e6db74;
+}
+
+#kali-terminal.theme-monokai #terminal-output {
+  color: #a6e22e;
+  scrollbar-color: #f92672 #1e1f1c;
+}
+
+#kali-terminal.theme-monokai .terminal-line.cmd-echo {
+  color: #66d9ef;
+}
+
+#kali-terminal.theme-monokai .terminal-line.system-success {
+  color: #e6db74;
+  border-color: #a6e22e;
+  background-color: rgba(166, 226, 46, 0.14);
+  text-shadow: 0 0 8px rgba(166, 226, 46, 0.55);
+}
+
+#kali-terminal.theme-monokai .terminal-logdump-container {
+  border-color: rgba(249, 38, 114, 0.5);
+  background-color: rgba(30, 31, 28, 0.95);
+}
+
+#kali-terminal.theme-monokai .terminal-logdump-header {
+  background-color: rgba(249, 38, 114, 0.18);
+  border-bottom-color: rgba(249, 38, 114, 0.4);
+  color: #fd971f;
+}
+
+#kali-terminal.theme-monokai .terminal-logdump-scroll {
+  color: #e6db74;
+  scrollbar-color: #f92672 #1e1f1c;
+}
+
+#kali-terminal.theme-monokai .terminal-input-row {
+  border-top-color: rgba(166, 226, 46, 0.32);
+  background-color: rgba(24, 25, 21, 0.75);
+}
+
+#kali-terminal.theme-monokai .terminal-prompt {
+  color: #f92672;
+}
+
+#kali-terminal.theme-monokai #terminal-input {
+  color: #fd971f;
+  caret-color: #f92672;
+}
+
+#kali-terminal.theme-monokai.crt-effect #terminal-output,
+#kali-terminal.theme-monokai.crt-effect .terminal-prompt,
+#kali-terminal.theme-monokai.crt-effect #terminal-input {
+  text-shadow:
+    0 0 4px rgba(166, 226, 46, 0.6),
+    0 0 9px rgba(249, 38, 114, 0.26);
+}
+
+#kali-terminal.theme-monokai.crt-effect::before {
+  background: linear-gradient(
+    to bottom,
+    rgba(166, 226, 46, 0) 0%,
+    rgba(166, 226, 46, 0.04) 48%,
+    rgba(249, 38, 114, 0.08) 50%,
+    rgba(166, 226, 46, 0.03) 52%,
+    rgba(166, 226, 46, 0) 100%
+  );
+  background-size: 100% 180%;
+}
+
+

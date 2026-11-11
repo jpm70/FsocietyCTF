@@ -1,0 +1,54 @@
+{
+  "name": "fsociety-ctf",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Fsociety // Operación 5/9 — Simulador interactivo Capture The Flag (CTF) inspirado en Mr. Robot con terminal Kali Linux, topología de red interactiva en D3.js, monitor de recursos en tiempo real y generación de certificados PDF con código QR.",
+  "keywords": [
+    "ctf",
+    "mr-robot",
+    "fsociety",
+    "kali-linux",
+    "cybersecurity",
+    "d3js",
+    "react",
+    "typescript",
+    "vite"
+  ],
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rm -rf dist server.js",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "^2.4.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/d3": "^7.4.3",
+    "@types/qrcode": "^1.5.6",
+    "@vitejs/plugin-react": "^6.1.1",
+    "d3": "^7.9.2",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "qrcode": "^1.5.4",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "vite": "^8.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^7.0.2",
+    "@types/express": "^4.17.21"
+  }
+}
