@@ -1,0 +1,461 @@
+/* ============================================================================
+   Distribución general: barra superior, marcador y ventanas sin solapes.
+   Se carga después de index.css y solo recoloca; la estética vive allí.
+   ============================================================================ */
+
+body,
+html {
+  width: 100%;
+  height: 100%;
+}
+
+#game-container {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* ---------------------------------------------------------------- barra superior */
+#fs-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  min-height: 52px;
+  padding: 0.45rem 0.9rem;
+  font-family: var(--font-hacker);
+  background: linear-gradient(180deg, rgba(4, 5, 7, 0.96) 0%, rgba(4, 5, 7, 0.86) 100%);
+  border-bottom: 1px solid rgba(244, 241, 234, 0.14);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+#fs-topbar.in-game {
+  border-bottom-color: rgba(0, 255, 65, 0.35);
+}
+
+.fs-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--manga-paper);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.fs-brand img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(217, 20, 36, 0.55));
+  transition: transform 0.2s ease;
+}
+
+.fs-brand:hover img {
+  transform: scale(1.08) rotate(-4deg);
+}
+
+.fs-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.fs-brand-text strong {
+  font-size: 0.86rem;
+  letter-spacing: 0.18em;
+}
+
+.fs-brand-text small {
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--blood-red);
+}
+
+/* ---------------------------------------------------------------- marcador (dentro de la barra) */
+#fs-topbar #uptime-hud {
+  position: static;
+  flex: 1 1 560px;
+  min-width: 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 0.78rem;
+}
+
+#fs-topbar .hud-top-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+#fs-topbar #uptime-display,
+#fs-topbar #score-display {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+#fs-topbar .hud-score-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Los avisos de puntos y de IDS flotan bajo el marcador: no mueven la barra */
+#fs-topbar #score-delta-badge {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 46;
+  white-space: nowrap;
+}
+
+#fs-topbar .ids-threat-box {
+  position: relative;
+  flex: 1 1 300px;
+  min-width: 240px;
+  max-width: 560px;
+  margin: 0;
+  padding: 0.3rem 0.6rem;
+}
+
+#fs-topbar .ids-threat-label-row {
+  gap: 0.6rem;
+}
+
+#fs-topbar #ids-delta-badge {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 46;
+  white-space: nowrap;
+}
+
+#fs-topbar #ids-prelock-warning,
+#fs-topbar #ids-lockdown-banner {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 47;
+  background-color: rgba(10, 4, 2, 0.96);
+}
+
+/* ---------------------------------------------------------------- controles */
+.fs-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.fs-audio {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-right: 0.5rem;
+  margin-right: 0.15rem;
+  border-right: 1px solid rgba(244, 241, 234, 0.16);
+}
+
+.fs-audio input[type='range'] {
+  width: 72px;
+  height: 4px;
+  accent-color: var(--terminal-green);
+  cursor: pointer;
+}
+
+.fs-ctl {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 30px;
+  padding: 0 0.6rem;
+  font-family: var(--font-hacker);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: #d4d4d8;
+  background-color: rgba(0, 0, 0, 0.55);
+  border: 1px solid #3f3f46;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.fs-ctl svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.fs-ctl:hover,
+.fs-ctl:focus-visible {
+  color: var(--terminal-green);
+  border-color: var(--terminal-green);
+  outline: none;
+}
+
+.fs-ctl.is-on {
+  color: var(--terminal-green);
+  border-color: rgba(0, 255, 65, 0.7);
+  background-color: rgba(0, 255, 65, 0.1);
+}
+
+.fs-ctl.is-off {
+  color: var(--blood-red);
+  border-color: rgba(217, 20, 36, 0.6);
+}
+
+.fs-ctl.is-danger:hover,
+.fs-ctl.is-danger:focus-visible {
+  color: #ff4d5e;
+  border-color: var(--blood-red);
+  background-color: rgba(217, 20, 36, 0.12);
+}
+
+.fs-ctl-count {
+  min-width: 16px;
+  padding: 0 4px;
+  font-size: 0.64rem;
+  line-height: 16px;
+  text-align: center;
+  color: #fff;
+  background-color: var(--blood-red);
+}
+
+.fs-dev {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding-left: 0.5rem;
+  border-left: 1px dashed #71717a;
+}
+
+.fs-dev .fs-ctl {
+  height: 24px;
+  padding: 0 0.4rem;
+  font-size: 0.64rem;
+  color: #a1a1aa;
+}
+
+@media (max-width: 1700px) {
+  .fs-ctl span {
+    display: none;
+  }
+  .fs-dev .fs-ctl span {
+    display: inline;
+  }
+  .fs-ctl {
+    padding: 0 0.5rem;
+  }
+}
+
+/* ---------------------------------------------------------------- pantalla de inicio */
+.scene-layer {
+  padding: 78px 1.25rem 1.25rem;
+  justify-content: space-between;
+  gap: 1rem;
+  overflow-y: auto;
+}
+
+.title-wrapper {
+  margin-top: 2vh;
+}
+
+.vn-bottom-dock {
+  gap: 1.1rem;
+}
+
+.fs-start-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem 1.25rem;
+  width: 100%;
+  font-family: var(--font-hacker);
+  font-size: 0.66rem;
+  line-height: 1.5;
+  text-align: center;
+  color: #a1a1aa;
+  text-shadow: 0 1px 2px #000;
+}
+
+.fs-start-footer a {
+  color: #d4d4d8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.fs-start-footer a:hover {
+  color: var(--terminal-green);
+}
+
+.fs-leaderboard-modal {
+  width: min(560px, 94vw);
+  max-height: 86vh;
+  overflow-y: auto;
+}
+
+@media (max-height: 760px) {
+  .glitch-title {
+    font-size: clamp(2.2rem, 6vw, 4rem);
+  }
+  .vn-dialogue-box {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+}
+
+/* ---------------------------------------------------------------- ventanas */
+#kali-terminal {
+  max-width: none;
+  max-height: none;
+}
+
+/* El monólogo de Elliot es una franja de la propia terminal (o de la pantalla final) */
+#elliot-monologue {
+  position: static;
+  transform: none;
+  width: auto;
+  flex-shrink: 0;
+  margin: 0;
+  border-width: 0 0 1px 4px;
+  box-shadow: none;
+  animation: fs-monologue-in 0.25s ease-out;
+}
+
+.win-screen-container > #elliot-monologue {
+  width: min(620px, 94vw);
+  border-width: 1px 1px 1px 4px;
+  text-align: left;
+}
+
+@keyframes fs-monologue-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#network-map,
+#fsociety-irc,
+#packet-sniffer {
+  max-width: calc(100vw - 16px);
+}
+
+#network-map {
+  min-height: 0;
+}
+
+.topology-legend {
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+}
+
+/* ---------------------------------------------------------------- victoria */
+.win-screen-container {
+  justify-content: flex-start;
+  height: 100%;
+  padding: 84px 1rem 2.5rem;
+  gap: 1.6rem;
+  overflow-y: auto;
+}
+
+.win-glitch-text {
+  font-size: clamp(1.5rem, 3.6vw, 3rem);
+  line-height: 1.25;
+}
+
+.win-actions-stack {
+  width: min(860px, 96vw);
+}
+
+/* ---------------------------------------------------------------- pantallas estrechas */
+@media (max-width: 720px) {
+  #fs-topbar {
+    padding: 0.4rem 0.5rem;
+    gap: 0.35rem 0.5rem;
+  }
+  .fs-brand-text small {
+    display: none;
+  }
+  .fs-audio input[type='range'] {
+    display: none;
+  }
+  #fs-topbar #uptime-hud {
+    order: 3;
+    flex-basis: 100%;
+    font-size: 0.7rem;
+  }
+  #fs-topbar .hud-forensic-badge,
+  #fs-topbar #hud-difficulty-badge,
+  #fs-topbar .ids-mac-pill {
+    display: none;
+  }
+  #kali-terminal {
+    resize: none;
+  }
+  #terminal-output {
+    padding: 0.7rem;
+    font-size: 0.78rem;
+  }
+  .scene-layer {
+    padding-top: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glitch-title,
+  .win-glitch-text,
+  #elliot-monologue {
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------- ajustes finos */
+#fs-topbar #ids-alert-label,
+#fs-topbar #ids-alert-value {
+  white-space: nowrap;
+}
+
+#fs-topbar .ids-threat-title-group {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.sniffer-packet-row {
+  grid-template-columns: 30px 128px 104px 70px minmax(0, 1fr);
+}
+
+.sniffer-packet-row > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* El aviso de subida del IDS cuelga de la caja completa, no de la fila de la etiqueta */
+#fs-topbar .ids-status-group,
+#fs-topbar .ids-threat-label-row {
+  position: static;
+}
