@@ -14,10 +14,10 @@
   --font-manga-dialogue: 'Chakra Petch', sans-serif;
 }
 
+/* El reset de márgenes lo aporta Tailwind (preflight). Repetirlo aquí, fuera de
+   capa, anulaba todas las utilidades de espaciado (p-*, m-*, gap…). */
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 body, html {
@@ -55,7 +55,7 @@ body, html {
   background-color: #1a1a1a;
   background-image:
     radial-gradient(circle at 50% 35%, rgba(26, 26, 26, 0.25) 0%, rgba(10, 10, 12, 0.88) 85%),
-    url('./assets/img/scene0_welcome.jpg');
+    url('/assets/img/scene0_welcome.jpg');
   background-size: cover;
   background-position: center;
 }
@@ -72,7 +72,7 @@ body, html {
   background-color: #1a1a1a;
   background-image:
     radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.85) 90%),
-    url('./assets/img/scene1_sqli.jpg');
+    url('/assets/img/scene1_sqli.jpg');
   background-size: cover;
   background-position: center;
 }
@@ -82,7 +82,7 @@ body, html {
   background-color: #1a1a1a;
   background-image:
     radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.85) 90%),
-    url('./assets/img/scene2_internal.jpg');
+    url('/assets/img/scene2_internal.jpg');
   background-size: cover;
   background-position: center;
 }
@@ -92,7 +92,7 @@ body, html {
   background-color: #1a1a1a;
   background-image:
     radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.85) 90%),
-    url('./assets/img/scene3_security.jpg');
+    url('/assets/img/scene3_security.jpg');
   background-size: cover;
   background-position: center;
 }
@@ -102,7 +102,7 @@ body, html {
   background-color: #1a1a1a;
   background-image:
     radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.85) 90%),
-    url('./assets/img/scene4_ceo.jpg');
+    url('/assets/img/scene4_ceo.jpg');
   background-size: cover;
   background-position: center;
 }
@@ -112,7 +112,7 @@ body, html {
   background-color: #1a1a1a;
   background-image:
     radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.85) 90%),
-    url('./assets/img/scene5_exterior.jpg');
+    url('/assets/img/scene5_exterior.jpg');
   background-size: cover;
   background-position: center;
 }
@@ -122,7 +122,7 @@ body, html {
   background-color: #1a1a1a;
   background-image:
     radial-gradient(circle at 50% 40%, rgba(15, 20, 25, 0.25) 0%, rgba(5, 5, 8, 0.88) 90%),
-    url('./assets/img/scene6_vault.jpg');
+    url('/assets/img/scene6_vault.jpg');
   background-size: cover;
   background-position: center;
 }

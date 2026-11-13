@@ -3,22 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as d3 from 'd3';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import {
-  Code2,
   RotateCcw,
-  Image as ImageIcon,
-  Check,
-  Copy,
   X,
   Terminal,
   Network,
   Volume2,
   VolumeX,
   FileDown,
+  FileText,
   Activity,
   MessageSquare,
   Trophy,
@@ -182,7 +179,15 @@ const LEADERBOARD_STORAGE_KEY = 'fsociety_ctf_leaderboard';
 const MUTE_STORAGE_KEY = 'fsociety_ctf_muted';
 const VOLUME_STORAGE_KEY = 'fsociety_ctf_volume';
 const DIFFICULTY_STORAGE_KEY = 'fsociety_ctf_difficulty';
-const FSOCIETY_REPORT_LOGO_PATH = '/assets/aistudio/image1s_fdadc00d.jpg';
+const ASSET_BASE = import.meta.env.BASE_URL;
+const FSOCIETY_REPORT_LOGO_PATH = `${ASSET_BASE}assets/img/fsociety_emblem.jpg`;
+const HOUSE_LOGO_PATH = `${ASSET_BASE}assets/img/fantasma.png`;
+const HOUSE_URL = 'https://www.unfantasmaenelsistema.com/';
+const REPO_URL = 'https://github.com/unfantasmaenelsistema/FsocietyCTF';
+
+// Atajos de desarrollo (saltar de escena): solo con ?dev en la URL
+const IS_DEV_MODE =
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('dev');
 
 const DEFAULT_BENCHMARK_LEADERBOARD: LeaderboardEntry[] = [
   {
@@ -628,585 +633,6 @@ function formatUptime(totalSeconds: number): string {
   return `UPTIME: ${hrs}:${mins}:${secs}`;
 }
 
-const STANDALONE_JS_CODE = `// ============================================================================
-// VARIABLES DE ESTADO, TEMPORIZADOR DE SPEEDRUN Y PERSISTENCIA (LOCALSTORAGE)
-// ============================================================================
-const STORAGE_KEY = 'fsociety_ctf_save';
-
-let currentScene = 0; // 0 = Bienvenida, 1 = SQLi, 2 = Red Interna, 3 = Seguridad, 4 = CEO, 5 = Exteriores/Cámara, 6 = Caja Fuerte
-let internalStep = 0;
-let securityStep = 0;
-let ceoStep = 0;
-let camStep = 0;      // Estado Escena 5 (Exteriores / Cámara IP)
-let vaultStep = 0;    // Estado Escena 6 (Caja Fuerte)
-let currentPrompt = 'eliot@fsociety:~# ';
-
-// Variables de Temporizador de Speedrun y Sistema de Pistas
-let elapsedSeconds = 0;
-let uptimeInterval = null;
-let failedAttempts = 0;
-
-// Historial de comandos y control de ejecución asíncrona
-let commandHistory = [];
-let historyIndex = -1;
-let isExecuting = false;
-
-const gameContainer = document.getElementById('game-container');
-const startBtn = document.getElementById('start-btn');
-const bgMusic = document.getElementById('bg-music');
-const uptimeDisplay = document.getElementById('uptime-display');
-const kaliTerminal = document.getElementById('kali-terminal');
-const terminalPrompt = document.getElementById('terminal-prompt');
-const terminalOutput = document.getElementById('terminal-output');
-const terminalInput = document.getElementById('terminal-input');
-
-// Mapa de fondos por escena
-const SCENE_BACKGROUNDS = {
-  0: { className: 'scene-0-bg', url: "url('./assets/img/scene0_welcome.jpg')" },
-  1: { className: 'scene-1-bg', url: "url('./assets/img/scene1_sqli.jpg')" },
-  2: { className: 'scene-2-bg', url: "url('./assets/img/scene2_internal.jpg')" },
-  3: { className: 'scene-3-bg', url: "url('./assets/img/scene3_security.jpg')" },
-  4: { className: 'scene-4-bg', url: "url('./assets/img/scene4_ceo.jpg')" },
-  5: { className: 'scene-5-bg', url: "url('./assets/img/scene5_exterior.jpg')" },
-  6: { className: 'scene-6-bg', url: "url('./assets/img/scene6_vault.jpg')" }
-};
-
-// ============================================================================
-// SISTEMA DE PISTAS CONTEXTUALES (hint / help -hint) Y CONTROL DE FALLOS
-// ============================================================================
-function registerSuccess() {
-  failedAttempts = 0;
-}
-
-function registerFailure(errorMessage = 'Command not recognized') {
-  failedAttempts++;
-  printLine(errorMessage, 'term-line term-error');
-
-  if (failedAttempts >= 4) {
-    printLine(
-      "[SISTEMA] Demasiados intentos fallidos. Ejecuta 'hint' para recibir asistencia de Fsociety.",
-      'term-line term-warn'
-    );
-  }
-}
-
-function getHintForCurrentState() {
-  switch (currentScene) {
-    case 1:
-      return "[Mensaje cifrado de Darlene]: El formulario de login público (http://ecorp.com/login.php?id=1) no sanitiza la entrada. Automatiza el volcado con 'sqlmap' o inyecta una tautología SQL.";
-
-    case 2:
-      if (internalStep === 0) {
-        return "[Mensaje cifrado de Darlene]: Estás a ciegas en la subred interna. Haz un barrido con 'nmap 10.0.0.0/24' para localizar impresoras o servidores mal configurados.";
-      }
-      if (internalStep === 1) {
-        return "[Mensaje cifrado de Darlene]: Esa impresora HP en 10.0.0.15 tiene el puerto 21 abierto con acceso anónimo ('ftp 10.0.0.15')... Busca archivos de configuración sueltos.";
-      }
-      return "[Mensaje cifrado de Darlene]: Ya estás dentro del FTP. Lista el directorio con 'ls' y descarga el respaldo con 'get config_backup.bak'.";
-
-    case 3:
-      if (securityStep === 0) {
-        return "[Mensaje cifrado de Darlene]: Usa las credenciales de la impresora para listar los recursos SMB de //10.0.0.50: 'smbclient -L //10.0.0.50 -U print-admin%P@ssw0rd_pr1nt'.";
-      }
-      if (securityStep === 1) {
-        return "[Mensaje cifrado de Darlene]: Conéctate al recurso compartido Security_Logs: 'smbclient //10.0.0.50/Security_Logs -U print-admin%P@ssw0rd_pr1nt'.";
-      }
-      if (securityStep === 2 || securityStep === 3) {
-        return "[Mensaje cifrado de Darlene]: Extrae los registros de tarjetas con 'get access_records.csv' y sal de la sesión SMB con 'exit'.";
-      }
-      return "[Mensaje cifrado de Darlene]: Clona el UID RFID capturado usando 'proxmark3 -c \"hf mf cload -f 047AB219C855\"'.";
-
-    case 4:
-      if (ceoStep === 0) {
-        return "[Mensaje cifrado de Darlene]: Fuerza el SSH del CEO (10.0.0.100) con diccionario: 'hydra -l ceo -P rockyou.txt ssh://10.0.0.100'.";
-      }
-      if (ceoStep === 1 || ceoStep === 1.5) {
-        return "[Mensaje cifrado de Darlene]: Entra con 'ssh ceo@10.0.0.100' y usa la contraseña descubierta ('godmode').";
-      }
-      if (ceoStep === 2) {
-        return "[Mensaje cifrado de Darlene]: Inspecciona los archivos del escritorio del CEO con 'ls' y lee 'cat safe_code.b64'.";
-      }
-      return "[Mensaje cifrado de Darlene]: Esa cadena termina en '=='. Decodifícala con 'echo \"NzM1NTYwOA==\" | base64 -d'.";
-
-    case 5:
-      if (camStep === 0) {
-        return "[Mensaje cifrado de Darlene]: Levanta el portal cautivo falso con 'python3 evil_portal.py --ssid \"ECorp_Security\"' para cazar las credenciales del guardia.";
-      }
-      if (camStep === 1) {
-        return "[Mensaje cifrado de Darlene]: Envía la petición POST a la API de la alarma con 'curl -u guard_01:Al4rm_0ff_99 -X POST http://192.168.99.10/api/alarm/disable'.";
-      }
-      if (camStep === 2) {
-        return "[Mensaje cifrado de Darlene]: Escanea la red exterior de cámaras con 'nmap 192.168.99.0/24'.";
-      }
-      if (camStep >= 3 && camStep <= 5) {
-        return "[Mensaje cifrado de Darlene]: Entra por 'telnet 192.168.99.20' con las credenciales de fábrica de Cam-OS (root / 12345).";
-      }
-      return "[Mensaje cifrado de Darlene]: Detén el demonio de vídeo de la cámara ejecutando 'service camera stop' o 'killall streamd'.";
-
-    case 6:
-      if (vaultStep === 0) {
-        return "[Mensaje cifrado de Darlene]: Conéctate al puerto serie de mantenimiento de la bóveda con 'minicom -D /dev/ttyUSB0' o 'screen /dev/ttyUSB0 9600'.";
-      }
-      return "[Mensaje cifrado de Darlene]: Introduce el código maestro de 7 dígitos que descifraste del Base64 del CEO: '7355608'.";
-
-    default:
-      return "[Mensaje cifrado de Darlene]: Mantén la calma, Elliot. Revisa 'help' para ver tus herramientas.";
-  }
-}
-
-function executeHintCommand() {
-  // Penalización de +3 minutos (180 segundos) en el temporizador de Uptime
-  elapsedSeconds += 180;
-  updateUptimeUI();
-  saveGame();
-
-  printLine('[PENALIZACIÓN] +00:03:00 añadidos al UPTIME por solicitar asistencia.', 'term-line term-error');
-  printLine(getHintForCurrentState(), 'term-line term-warn');
-}
-
-// ============================================================================
-// 1. TEMPORIZADOR DE SPEEDRUN (UPTIME: 00:00:00)
-// ============================================================================
-function formatUptime(totalSeconds) {
-  const hrs = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-  const mins = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-  const secs = String(totalSeconds % 60).padStart(2, '0');
-  return \`UPTIME: \${hrs}:\${mins}:\${secs}\`;
-}
-
-function renderUptime() {
-  if (uptimeDisplay) {
-    uptimeDisplay.textContent = formatUptime(elapsedSeconds);
-  }
-}
-
-function startUptimeTimer() {
-  if (uptimeInterval) clearInterval(uptimeInterval);
-  renderUptime();
-  if (uptimeDisplay) uptimeDisplay.classList.remove('hidden');
-
-  uptimeInterval = setInterval(() => {
-    elapsedSeconds++;
-    renderUptime();
-    saveGame();
-  }, 1000);
-}
-
-function stopUptimeTimer() {
-  if (uptimeInterval) {
-    clearInterval(uptimeInterval);
-    uptimeInterval = null;
-  }
-}
-
-// ============================================================================
-// 2. PERSISTENCIA DE DATOS EN LOCALSTORAGE (saveGame, loadGame, resetGame)
-// ============================================================================
-function applySceneBackground(sceneNum) {
-  Object.values(SCENE_BACKGROUNDS).forEach((bg) => {
-    gameContainer.classList.remove(bg.className);
-  });
-  const targetBg = SCENE_BACKGROUNDS[sceneNum] || SCENE_BACKGROUNDS[1];
-  gameContainer.classList.add(targetBg.className);
-  gameContainer.style.backgroundImage = targetBg.url;
-}
-
-function saveGame() {
-  if (currentScene < 1 || currentScene > 6) return;
-
-  const stateToSave = {
-    currentScene,
-    elapsedSeconds,
-    internalStep,
-    securityStep,
-    ceoStep,
-    camStep,
-    vaultStep,
-    currentPrompt
-  };
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-  } catch (err) {
-    console.warn('No se pudo guardar la partida en localStorage:', err);
-  }
-}
-
-function loadGame() {
-  try {
-    const rawSaved = localStorage.getItem(STORAGE_KEY);
-    if (!rawSaved) return false;
-
-    const saved = JSON.parse(rawSaved);
-    if (!saved || !saved.currentScene || saved.currentScene < 1) return false;
-
-    // Restaurar variables de estado
-    currentScene = saved.currentScene;
-    elapsedSeconds = Number(saved.elapsedSeconds) || 0;
-    internalStep = Number(saved.internalStep) || 0;
-    securityStep = Number(saved.securityStep) || 0;
-    ceoStep = Number(saved.ceoStep) || 0;
-    camStep = Number(saved.camStep) || 0;
-    vaultStep = Number(saved.vaultStep) || 0;
-
-    // Si estaba en medio de un sub-prompt de contraseña/login, regresar al paso previo seguro
-    if (ceoStep === 1.5) ceoStep = 1;
-    if (camStep === 4 || camStep === 5) camStep = 3;
-
-    // Saltar la pantalla de bienvenida y mostrar la terminal
-    const scene0 = document.getElementById('scene-0');
-    const scene1 = document.getElementById('scene-1');
-    if (scene0) scene0.classList.add('hidden');
-    if (scene1) scene1.classList.remove('hidden');
-
-    // Restaurar fondo de la escena correspondiente y el prompt
-    applySceneBackground(currentScene);
-    updatePrompt(saved.currentPrompt || 'eliot@fsociety:~# ');
-
-    // Reanudar el reloj con el tiempo guardado
-    startUptimeTimer();
-
-    // Imprimir mensaje de confirmación en la terminal
-    printLine('[SISTEMA] Sesión anterior restaurada.', 'term-line term-success');
-    terminalInput.focus();
-    return true;
-  } catch (err) {
-    console.warn('Error al cargar partida desde localStorage:', err);
-    return false;
-  }
-}
-
-function resetGame() {
-  stopUptimeTimer();
-  localStorage.removeItem(STORAGE_KEY);
-  location.reload();
-}
-
-// ============================================================================
-// 3. SONIDOS DE INTERACCIÓN (SFX), MUTE Y VOLUMEN MAESTRO (LOCALSTORAGE)
-// ============================================================================
-const MUTE_STORAGE_KEY = 'fsociety_ctf_muted';
-const VOLUME_STORAGE_KEY = 'fsociety_ctf_volume';
-
-let isAudioMuted = localStorage.getItem(MUTE_STORAGE_KEY) === 'true';
-let masterVolume = parseFloat(localStorage.getItem(VOLUME_STORAGE_KEY) ?? '0.3');
-if (Number.isNaN(masterVolume) || masterVolume < 0 || masterVolume > 1) {
-  masterVolume = 0.3;
-}
-
-const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-let sfxCtx = null;
-
-function applyAudioSettings() {
-  if (bgMusic) {
-    bgMusic.muted = isAudioMuted;
-    bgMusic.volume = isAudioMuted ? 0 : masterVolume;
-  }
-  const muteBtn = document.getElementById('mute-toggle-btn');
-  if (muteBtn) {
-    muteBtn.textContent = isAudioMuted || masterVolume === 0 ? '[ SONIDO: OFF ]' : '[ SONIDO: ON ]';
-  }
-  const volumeSlider = document.getElementById('volume-slider');
-  if (volumeSlider) {
-    volumeSlider.value = String(isAudioMuted ? 0 : masterVolume);
-  }
-  const volumeLabel = document.getElementById('volume-value-label');
-  if (volumeLabel) {
-    volumeLabel.textContent = \`\${Math.round((isAudioMuted ? 0 : masterVolume) * 100)}%\`;
-  }
-}
-
-function toggleAudioMute() {
-  isAudioMuted = !isAudioMuted;
-  if (!isAudioMuted && masterVolume === 0) {
-    masterVolume = 0.3;
-    localStorage.setItem(VOLUME_STORAGE_KEY, String(masterVolume));
-  }
-  localStorage.setItem(MUTE_STORAGE_KEY, String(isAudioMuted));
-  applyAudioSettings();
-}
-
-function setMasterVolume(newVal) {
-  const clamped = Math.max(0, Math.min(1, parseFloat(newVal)));
-  masterVolume = Number.isNaN(clamped) ? 0.3 : clamped;
-  isAudioMuted = masterVolume === 0;
-  localStorage.setItem(VOLUME_STORAGE_KEY, String(masterVolume));
-  localStorage.setItem(MUTE_STORAGE_KEY, String(isAudioMuted));
-  applyAudioSettings();
-}
-
-function ensureAudioContext() {
-  if (isAudioMuted || masterVolume <= 0) return null;
-  if (!sfxCtx && AudioCtxClass) {
-    sfxCtx = new AudioCtxClass();
-  }
-  if (sfxCtx && sfxCtx.state === 'suspended') {
-    sfxCtx.resume();
-  }
-  return sfxCtx;
-}
-
-// Sonido 1 (Tecleo): Un leve "tic" al pulsar cualquier tecla en el input
-function playTypingSfx() {
-  const ctx = ensureAudioContext();
-  if (!ctx) return;
-
-  const now = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  const peakGain = Math.max(0.002, 0.07 * masterVolume);
-
-  osc.type = 'triangle';
-  osc.frequency.setValueAtTime(920, now);
-  osc.frequency.exponentialRampToValueAtTime(1400, now + 0.022);
-
-  gain.gain.setValueAtTime(peakGain, now);
-  gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.025);
-
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  osc.start(now);
-  osc.stop(now + 0.026);
-}
-
-// Sonido 2 (Éxito): Tono de confirmación al avanzar de paso en la máquina de estados
-function playSuccessSfx() {
-  const ctx = ensureAudioContext();
-  if (!ctx) return;
-
-  const now = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  const peakGain = Math.max(0.003, 0.16 * masterVolume);
-
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(587.33, now);        // D5
-  osc.frequency.setValueAtTime(880.0, now + 0.075); // A5
-
-  gain.gain.setValueAtTime(peakGain, now);
-  gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.22);
-
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  osc.start(now);
-  osc.stop(now + 0.23);
-}
-
-// Sonido 3 (Error): Tono grave cuando se introduce un comando inválido
-function playErrorSfx() {
-  const ctx = ensureAudioContext();
-  if (!ctx) return;
-
-  const now = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  const peakGain = Math.max(0.003, 0.15 * masterVolume);
-
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(150, now);
-  osc.frequency.linearRampToValueAtTime(92, now + 0.19);
-
-  gain.gain.setValueAtTime(peakGain, now);
-  gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.21);
-
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  osc.start(now);
-  osc.stop(now + 0.22);
-}
-
-// ============================================================================
-// 4. GENERACIÓN DE CERTIFICADO PDF CON jsPDF (fsociety_report.pdf)
-// ============================================================================
-function downloadMissionReport() {
-  const rawAlias = prompt('Introduce tu Alias Hacker para el Informe Oficial de Fsociety:', 'Elliot_Alderson');
-  if (rawAlias === null) return; // Cancelado por el usuario
-
-  const hackerAlias = rawAlias.trim() || 'Operador_Anonimo';
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({
-    orientation: 'landscape',
-    unit: 'mm',
-    format: 'a4'
-  });
-
-  const pageWidth = doc.internal.pageSize.getWidth();   // 297 mm
-  const pageHeight = doc.internal.pageSize.getHeight(); // 210 mm
-  const todayStr = new Date().toLocaleDateString('es-ES', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  const totalTimeStr = formatUptime(elapsedSeconds).replace('UPTIME: ', '');
-
-  // Fondo oscuro completo (#0a0a0c)
-  doc.setFillColor(10, 10, 12);
-  doc.rect(0, 0, pageWidth, pageHeight, 'F');
-
-  // Marco exterior rojo sangre (#d91424) y marco interior verde terminal (#00ff41)
-  doc.setDrawColor(217, 20, 36);
-  doc.setLineWidth(1.6);
-  doc.rect(10, 10, pageWidth - 20, pageHeight - 20, 'S');
-
-  doc.setDrawColor(0, 255, 65);
-  doc.setLineWidth(0.5);
-  doc.rect(14, 14, pageWidth - 28, pageHeight - 28, 'S');
-
-  // Cabecera clasificada Fsociety
-  doc.setFont('courier', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(217, 20, 36);
-  doc.text('/// CLASIFICADO: DIRECTIVA FSOCIETY - OPERACION ECORP FALL ///', pageWidth / 2, 28, { align: 'center' });
-
-  // Título principal
-  doc.setFontSize(28);
-  doc.setTextColor(0, 255, 65);
-  doc.text('INFORME DE MISION COMPLETADA', pageWidth / 2, 46, { align: 'center' });
-
-  // Línea separadora
-  doc.setDrawColor(0, 255, 65);
-  doc.line(35, 53, pageWidth - 35, 53);
-
-  // Cuerpo tipo máquina de escribir
-  doc.setFont('courier', 'normal');
-  doc.setFontSize(13);
-  doc.setTextColor(244, 241, 234);
-  doc.text('Por la presente se certifica que el operador identificado bajo el alias:', pageWidth / 2, 70, { align: 'center' });
-
-  // Alias Hacker destacado
-  doc.setFont('courier', 'bold');
-  doc.setFontSize(26);
-  doc.setTextColor(217, 20, 36);
-  doc.text(\`[ \${hackerAlias} ]\`, pageWidth / 2, 87, { align: 'center' });
-
-  // Descripción de los vectores vulnerados
-  doc.setFont('courier', 'normal');
-  doc.setFontSize(12);
-  doc.setTextColor(212, 212, 216);
-  const reportLines = [
-    'ha ejecutado con exito la intrusion completa contra la infraestructura de ECorp,',
-    'superando todos los nodos de seguridad: SQL Injection perimetral, extraccion FTP,',
-    'movimiento lateral SMB, clonado RFID (Proxmark3), fuerza bruta SSH al CEO,',
-    'sabotaje exterior mediante Evil Portal / Telnet y apertura serie de la Boveda.'
-  ];
-  doc.text(reportLines, pageWidth / 2, 104, { align: 'center', lineHeightFactor: 1.55 });
-
-  // Caja de metadatos (Tiempo Total y Fecha)
-  doc.setDrawColor(217, 20, 36);
-  doc.setFillColor(18, 18, 22);
-  doc.rect(45, 140, pageWidth - 90, 28, 'FD');
-
-  doc.setFont('courier', 'bold');
-  doc.setFontSize(13);
-  doc.setTextColor(0, 255, 65);
-  doc.text(\`TIEMPO TOTAL (UPTIME): \${totalTimeStr}\`, 55, 157);
-  doc.text(\`FECHA DE EJECUCION: \${todayStr}\`, pageWidth - 55, 157, { align: 'right' });
-
-  // Pie de firma
-  doc.setFont('courier', 'italic');
-  doc.setFontSize(11);
-  doc.setTextColor(160, 160, 170);
-  doc.text('"Hello, friend. Our democracy has been hacked." — Fsociety Command', pageWidth / 2, 184, { align: 'center' });
-
-  doc.save('fsociety_report.pdf');
-}
-
-// ============================================================================
-// 5. CAPA DE META-HACKING (DEVTOOLS F12: CONSOLA + LOCALSTORAGE + debug_auth)
-// ============================================================================
-const DEBUG_SESSION_KEY = 'ecorp_debug_session';
-const DEBUG_SESSION_HASH = 'e9f4a8c2d1b7_fsociety_root';
-const EMERGENCY_B64_KEY = 'dXNlcl9iYWNrdXA='; // Base64 de "user_backup"
-
-function initMetaHacking() {
-  try {
-    // 1. Inyectar sesión de depuración falsa en localStorage y sessionStorage
-    localStorage.setItem(DEBUG_SESSION_KEY, DEBUG_SESSION_HASH);
-    sessionStorage.setItem(DEBUG_SESSION_KEY, DEBUG_SESSION_HASH);
-
-    // 2. Imprimir arte ASCII y llave de emergencia en Base64 en la consola real (F12)
-    console.warn(\`
-  ______ _____  ____   _____ _____ ______ _________     __
- |  ____/ ____|/ __ \\\\ / ____|_   _|  ____|__   __\\\\ \\\\   / /
- | |__ | (___ | |  | | |      | | | |__     | |   \\\\ \\\\_/ / 
- |  __| \\\\___ \\\\| |  | | |      | | |  __|    | |    \\\\   /  
- | |    ____) | |__| | |____ _| |_| |____   | |     | |   
- |_|   |_____/ \\\\____/ \\\\_____|_____|______|  |_|     |_|   
-
-[ECORP LEGACY DEBUG DAEMON v0.94 - UNAUTHORIZED ACCESS LOGGED]
---------------------------------------------------------------
-[!] Llave de acceso de emergencia: \${EMERGENCY_B64_KEY}
-[!] Debug Session Storage Key   : localStorage.getItem('\${DEBUG_SESSION_KEY}')
-[!] Terminal Backdoor Command   : debug_auth <token>
-\`);
-  } catch (err) {
-    // Ignorar restricciones de almacenamiento del navegador
-  }
-}
-
-// ============================================================================
-// 6. MOTOR DE PARANOIA EN SEGUNDO PLANO (INTERVALOS ALEATORIOS 30s - 90s)
-// ============================================================================
-const PHANTOM_MESSAGES = ['WAKE UP', 'HE IS WATCHING'];
-let paranoiaTimerId = null;
-
-function triggerParanoiaEvent() {
-  const randomChoice = Math.floor(Math.random() * 3); // 0, 1 o 2
-
-  if (randomChoice === 0) {
-    // Evento 1: Ejecutar animación de glitch CSS en todo el body durante 200 ms
-    document.body.classList.add('paranoia-glitch-active');
-    setTimeout(() => {
-      document.body.classList.remove('paranoia-glitch-active');
-    }, 200);
-  } else if (randomChoice === 1) {
-    // Evento 2: Inyectar línea fantasma ("WAKE UP" o "HE IS WATCHING") y borrarla 500 ms después
-    if (!terminalOutput) return;
-    const ghostEl = document.createElement('div');
-    ghostEl.className = 'terminal-line phantom-hallucination';
-    ghostEl.textContent = PHANTOM_MESSAGES[Math.floor(Math.random() * PHANTOM_MESSAGES.length)];
-    terminalOutput.appendChild(ghostEl);
-    terminalOutput.scrollTop = terminalOutput.scrollHeight;
-
-    setTimeout(() => {
-      if (ghostEl.parentNode) {
-        ghostEl.parentNode.removeChild(ghostEl);
-      }
-    }, 500);
-  } else {
-    // Evento 3: Desenfocar ligeramente la terminal (filter: blur(2px)) y volver a enfocarla poco a poco
-    if (!kaliTerminal) return;
-    kaliTerminal.classList.add('paranoia-blur-active');
-    setTimeout(() => {
-      kaliTerminal.classList.remove('paranoia-blur-active');
-    }, 650);
-  }
-}
-
-function scheduleNextParanoiaTick() {
-  if (paranoiaTimerId) clearTimeout(paranoiaTimerId);
-  // Intervalo aleatorio entre 30.000 ms (30s) y 90.000 ms (90s)
-  const nextDelayMs = Math.floor(Math.random() * (90000 - 30000 + 1)) + 30000;
-
-  paranoiaTimerId = setTimeout(() => {
-    if (currentScene >= 1 && currentScene <= 6) {
-      triggerParanoiaEvent();
-    }
-    scheduleNextParanoiaTick();
-  }, nextDelayMs);
-}
-
-// Ejecutar initMetaHacking(), loadGame() y el Motor de Paranoia al cargar la página
-window.addEventListener('DOMContentLoaded', () => {
-  initMetaHacking();
-  loadGame();
-  scheduleNextParanoiaTick();
-});
-`;
-
 const DEBUG_SESSION_KEY = 'ecorp_debug_session';
 const DEBUG_SESSION_HASH = 'e9f4a8c2d1b7_fsociety_root';
 const EMERGENCY_B64_KEY = 'dXNlcl9iYWNrdXA='; // Decodifica a "user_backup"
@@ -1229,13 +655,13 @@ export default function App() {
   const [ceoStep, setCeoStep] = useState<number>(0);
   const [exteriorStep, setExteriorStep] = useState<number>(0);
   const [vaultStep, setVaultStep] = useState<number>(0);
-  const [currentPrompt, setCurrentPrompt] = useState<string>('eliot@fsociety:~#');
-  const [windowTitle, setWindowTitle] = useState<string>('eliot@fsociety:~');
+  const [currentPrompt, setCurrentPrompt] = useState<string>('elliot@fsociety:~#');
+  const [windowTitle, setWindowTitle] = useState<string>('elliot@fsociety:~');
 
   const [isMissionModalOpen, setIsMissionModalOpen] = useState<boolean>(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
   const [hackerAliasInput, setHackerAliasInput] = useState<string>('Elliot_Alderson');
-  const [isStartLeaderboardOpen, setIsStartLeaderboardOpen] = useState<boolean>(true);
+  const [isStartLeaderboardOpen, setIsStartLeaderboardOpen] = useState<boolean>(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => {
     try {
       const raw = window.localStorage.getItem(LEADERBOARD_STORAGE_KEY);
@@ -1250,9 +676,7 @@ export default function App() {
     }
     return DEFAULT_BENCHMARK_LEADERBOARD;
   });
-  const [useBackgroundImg, setUseBackgroundImg] = useState<boolean>(true);
-  const [showCodeModal, setShowCodeModal] = useState<boolean>(false);
-  const [copied, setCopied] = useState<boolean>(false);
+  const useBackgroundImg = true;
 
   // Estado de silencio (Mute/Unmute) y Volumen Maestro (0.0 a 1.0) persistidos en localStorage
   const [isMuted, setIsMuted] = useState<boolean>(() => {
@@ -1287,7 +711,10 @@ export default function App() {
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [vfsSubdir, setVfsSubdir] = useState<string>('');
 
-  const [termPos, setTermPos] = useState<{ x: number; y: number }>({ x: 64, y: 80 });
+  const [termPos, setTermPos] = useState<{ x: number; y: number }>({ x: 14, y: 76 });
+  const [termSize, setTermSize] = useState<{ w: number; h: number }>({ w: 760, h: 520 });
+  const [sidePanel, setSidePanel] = useState<{ w: number; ircH: number }>({ w: 390, ircH: 295 });
+  const topbarRef = useRef<HTMLElement | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
   // Estado de la segunda ventana flotante: Network Topology (#network-map)
@@ -1546,7 +973,7 @@ export default function App() {
     }, 2800);
   };
 
-  // Precargar la imagen del logo de Fsociety (/assets/aistudio/image1s_fdadc00d.jpg) en Base64 para jsPDF
+  // Precargar la imagen del logo de Fsociety (assets/img/fsociety_emblem.jpg) en Base64 para jsPDF
   useEffect(() => {
     let isActive = true;
     const preloadLogo = async () => {
@@ -2188,7 +1615,7 @@ export default function App() {
     doc.rect(14, 14, pageWidth - 28, pageHeight - 28, 'S');
 
     // ========================================================================
-    // COLUMNA IZQUIERDA: LOGO OFICIAL FSOCIETY (/assets/aistudio/image1s_fdadc00d.jpg)
+    // COLUMNA IZQUIERDA: LOGO OFICIAL FSOCIETY (assets/img/fsociety_emblem.jpg)
     // ========================================================================
     const logoBoxX = 22;
     const logoBoxY = 22;
@@ -2664,9 +2091,9 @@ export default function App() {
       setCurrentPrompt(
         saved.currentPrompt && saved.currentPrompt.length > 0
           ? saved.currentPrompt
-          : 'eliot@fsociety:~#'
+          : 'elliot@fsociety:~#'
       );
-      setWindowTitle(saved.windowTitle || 'eliot@fsociety:~');
+      setWindowTitle(saved.windowTitle || 'elliot@fsociety:~');
 
       setTerminalLogs((prev) => [
         ...prev,
@@ -3120,7 +2547,67 @@ export default function App() {
     };
   }, [isDragging, isDraggingMap, isDraggingSniffer, isDraggingIrc, isIrcDocked]);
 
+  // Coloca terminal, mapa de red, IRC y sniffer sin solaparse según el tamaño de la ventana
+  const applyWindowLayout = useCallback((isFirstEntry: boolean) => {
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const margin = W < 640 ? 8 : 14;
+    const gap = 12;
+    const barH = topbarRef.current?.offsetHeight ?? 60;
+    const top = barH + gap;
+    const isWide = W >= 1180;
+    const sideW = isWide ? Math.min(410, Math.max(340, Math.round(W * 0.27))) : Math.min(390, W - margin * 2);
+    const termW = Math.max(300, Math.min(1180, W - margin * 2 - (isWide ? sideW + gap : 0)));
+    const termH = Math.max(260, H - top - margin);
+    setTermPos({ x: margin, y: top });
+    setTermSize({ w: termW, h: termH });
+
+    const sideX = isWide ? margin + termW + gap : Math.max(margin, W - sideW - margin);
+    const mapH = netMapRef.current?.offsetHeight || 318;
+    const ircY = isWide ? top + mapH + gap : top + 40;
+    const ircH = Math.max(200, Math.min(520, H - ircY - margin));
+    setNetMapPos({ x: sideX, y: top });
+    setIrcPos({ x: sideX, y: Math.min(ircY, Math.max(top, H - ircH - margin)) });
+    setSidePanel({ w: sideW, ircH });
+    setSnifferPos({
+      x: Math.max(margin, margin + termW - Math.min(446, termW)),
+      y: Math.max(top, H - 372),
+    });
+
+    if (isFirstEntry) {
+      // En pantallas estrechas las ventanas auxiliares empiezan cerradas para no tapar la terminal
+      setIsNetworkMapOpen(isWide);
+      setIsIrcOpen(isWide);
+      setIsIrcDocked(false);
+    }
+  }, []);
+
+  const isGameActive =
+    sceneState !== 'SCENE_0' && sceneState !== 'TRANSITIONING' && sceneState !== 'WIN';
+
+  useEffect(() => {
+    if (!isGameActive) return;
+    let frame = window.requestAnimationFrame(() => {
+      applyWindowLayout(true);
+      // Segunda pasada: el mapa ya está pintado y se conoce su altura real
+      frame = window.requestAnimationFrame(() => applyWindowLayout(false));
+    });
+    const onResize = () => applyWindowLayout(false);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [isGameActive, applyWindowLayout]);
+
+  const handleConfirmReset = () => {
+    if (window.confirm('¿Borrar la partida guardada y volver a la pantalla de inicio?')) {
+      handleResetGameComplete();
+    }
+  };
+
   const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('button')) return;
     if (!terminalRef.current) return;
     const rect = terminalRef.current.getBoundingClientRect();
     dragOffsetRef.current = {
@@ -3438,8 +2925,8 @@ export default function App() {
 
     transitionTimerRef.current = window.setTimeout(() => {
       setElapsedSeconds(0);
-      setCurrentPrompt('eliot@fsociety:~#');
-      setWindowTitle('eliot@fsociety:~');
+      setCurrentPrompt('elliot@fsociety:~#');
+      setWindowTitle('elliot@fsociety:~');
       setInternalStep(0);
       setSecurityStep(0);
       setCeoStep(0);
@@ -3454,8 +2941,8 @@ export default function App() {
         ceoStep: 0,
         camStep: 0,
         vaultStep: 0,
-        currentPrompt: 'eliot@fsociety:~#',
-        windowTitle: 'eliot@fsociety:~',
+        currentPrompt: 'elliot@fsociety:~#',
+        windowTitle: 'elliot@fsociety:~',
       });
     }, 1100);
   };
@@ -3463,8 +2950,8 @@ export default function App() {
   const triggerScene2Transition = () => {
     setSceneState('SCENE_2');
     setInternalStep(0);
-    setCurrentPrompt('eliot@fsociety:~/ecorp_internal#');
-    setWindowTitle('eliot@fsociety:~/ecorp_internal');
+    setCurrentPrompt('elliot@fsociety:~/ecorp_internal#');
+    setWindowTitle('elliot@fsociety:~/ecorp_internal');
     setTerminalLogs((prev) => [
       ...prev,
       {
@@ -3478,8 +2965,8 @@ export default function App() {
   const triggerScene3Transition = () => {
     setSceneState('SCENE_3');
     setSecurityStep(0);
-    setCurrentPrompt('eliot@fsociety:~/ecorp_security#');
-    setWindowTitle('eliot@fsociety:~/ecorp_security');
+    setCurrentPrompt('elliot@fsociety:~/ecorp_security#');
+    setWindowTitle('elliot@fsociety:~/ecorp_security');
     setTerminalLogs((prev) => [
       ...prev,
       {
@@ -3493,8 +2980,8 @@ export default function App() {
   const triggerScene4Transition = () => {
     setSceneState('SCENE_4');
     setCeoStep(0);
-    setCurrentPrompt('eliot@fsociety:~/ecorp_ceo_network#');
-    setWindowTitle('eliot@fsociety:~/ecorp_ceo_network');
+    setCurrentPrompt('elliot@fsociety:~/ecorp_ceo_network#');
+    setWindowTitle('elliot@fsociety:~/ecorp_ceo_network');
     setTerminalLogs((prev) => [
       ...prev,
       {
@@ -3508,8 +2995,8 @@ export default function App() {
   const triggerScene5Transition = () => {
     setSceneState('SCENE_5');
     setExteriorStep(0);
-    setCurrentPrompt('eliot@fsociety:~/ecorp_exterior#');
-    setWindowTitle('eliot@fsociety:~/ecorp_exterior');
+    setCurrentPrompt('elliot@fsociety:~/ecorp_exterior#');
+    setWindowTitle('elliot@fsociety:~/ecorp_exterior');
     setTerminalLogs((prev) => [
       ...prev,
       {
@@ -3523,8 +3010,8 @@ export default function App() {
   const triggerScene6Transition = () => {
     setSceneState('SCENE_6');
     setVaultStep(0);
-    setCurrentPrompt('eliot@fsociety:~/ecorp_vault#');
-    setWindowTitle('eliot@fsociety:~/ecorp_vault');
+    setCurrentPrompt('elliot@fsociety:~/ecorp_vault#');
+    setWindowTitle('elliot@fsociety:~/ecorp_vault');
     setTerminalLogs((prev) => [
       ...prev,
       {
@@ -3586,8 +3073,8 @@ export default function App() {
     setCeoStep(0);
     setExteriorStep(0);
     setVaultStep(0);
-    setCurrentPrompt('eliot@fsociety:~#');
-    setWindowTitle('eliot@fsociety:~');
+    setCurrentPrompt('elliot@fsociety:~#');
+    setWindowTitle('elliot@fsociety:~');
     setSceneState('SCENE_0');
   };
 
@@ -3601,12 +3088,12 @@ export default function App() {
           return '[Mensaje cifrado de Darlene]: Estamos dentro de la subred 10.0.0.0/24. Lanza un barrido ping con nmap para descubrir el servidor de archivos.';
         }
         if (internalStep === 1) {
-          return '[Mensaje cifrado de Darlene]: Busca archivos de configuración sueltos... Conéctate por FTP al servidor 10.0.0.50.';
+          return '[Mensaje cifrado de Darlene]: Busca archivos de configuración sueltos... La impresora 10.0.0.15 admite FTP anónimo.';
         }
         if (internalStep === 2) {
-          return '[Mensaje cifrado de Darlene]: Lista los archivos del FTP (ls), descarga el respaldo (get config_backup.bak) y sal de la sesión (exit).';
+          return '[Mensaje cifrado de Darlene]: Lista los archivos del FTP (ls) y descarga el respaldo con get config_backup.bak.';
         }
-        return '[Mensaje cifrado de Darlene]:Ya tienes el archivo en tu máquina local. Léelo con cat config_backup.bak.';
+        return '[Mensaje cifrado de Darlene]: Ya tienes las credenciales del respaldo. El salto al servidor de seguridad es automático.';
       case 'SCENE_3':
         if (securityStep === 0) {
           return '[Mensaje cifrado de Darlene]: Usa smbclient -L //10.0.0.50 -U print-admin%P@ssw0rd_pr1nt para listar las carpetas compartidas.';
@@ -3620,7 +3107,7 @@ export default function App() {
         if (securityStep === 4) {
           return '[Mensaje cifrado de Darlene]: Inspecciona access_records.csv con cat para obtener el UID hexadecimal del Jefe de Seguridad.';
         }
-        return '[Mensaje cifrado de Darlene]: Clona la tarjeta RFID usando proxmark3 -c --uid 04:A3:9B:12.';
+        return '[Mensaje cifrado de Darlene]: Clona la tarjeta con el UID de access_records.csv, tal como explica rfid_manual.txt (cat rfid_manual.txt).';
       case 'SCENE_4':
         if (ceoStep === 0) {
           return '[Mensaje cifrado de Darlene]: Ataca el SSH del CEO (10.0.0.100) usando hydra -l ceo -P rockyou.txt ssh://10.0.0.100.';
@@ -3629,7 +3116,7 @@ export default function App() {
           return '[Mensaje cifrado de Darlene]: Entra con ssh ceo@10.0.0.100 y usa la contraseña descubierta (godmode).';
         }
         if (ceoStep === 2) {
-          return '[Mensaje cifrado de Darlene]: Revisa los archivos del escritorio del CEO (ls y cat vault_code.b64).';
+          return '[Mensaje cifrado de Darlene]: Revisa los archivos del escritorio del CEO (ls y cat safe_code.b64).';
         }
         return '[Mensaje cifrado de Darlene]: Decodifica la cadena Base64 con echo "NzM1NTYwOA==" | base64 -d.';
       case 'SCENE_5':
@@ -3637,15 +3124,15 @@ export default function App() {
           return '[Mensaje cifrado de Darlene]: Levanta el portal cautivo WiFi con python3 evil_portal.py --ssid "ECorp_Security".';
         }
         if (exteriorStep === 1) {
-          return '[Mensaje cifrado de Darlene]: Desautentica al guardia con aireplay-ng --deauth 0 -a 00:14:22:01:23:45 wlan0mon.';
+          return '[Mensaje cifrado de Darlene]: El portal ya capturó usuario y clave del guardia. Úsalos contra la API de la alarma (mira wifi_targets.txt y la salida anterior).';
         }
         if (exteriorStep === 2) {
-          return '[Mensaje cifrado de Darlene]: Apaga la alarma enviando una petición POST con curl usando el token robado.';
+          return '[Mensaje cifrado de Darlene]: Alarma fuera. Ahora localiza la cámara con un barrido de 192.168.99.0/24.';
         }
         if (exteriorStep === 3 || exteriorStep === 4 || exteriorStep === 5) {
           return '[Mensaje cifrado de Darlene]: Entra por telnet 192.168.99.20 con usuario root/admin y clave por defecto 12345.';
         }
-        return '[Mensaje cifrado de Darlene]: Congela el vídeo ejecutando ./loop_stream.sh --file pasillo_vacio.mp4.';
+        return '[Mensaje cifrado de Darlene]: Ya eres root en la cámara: detén el servicio de vídeo (service camera stop).';
       case 'SCENE_6':
         if (vaultStep === 0) {
           return '[Mensaje cifrado de Darlene]: Conéctate al puerto serie de la bóveda con minicom -D /dev/ttyUSB0 o screen /dev/ttyUSB0 9600.';
@@ -3657,8 +3144,17 @@ export default function App() {
   };
 
   // Registrar comando fallido con penalización de puntos e incremento de Alerta IDS según la dificultad seleccionada
-  const registerCommandFailure = (entries: TerminalEntry[]) => {
+  const registerCommandFailure = (entries: TerminalEntry[], forcePenalty = false) => {
     playErrorSfx();
+    const lastEntry = entries[entries.length - 1];
+    const isGenericMiss =
+      !!lastEntry &&
+      (lastEntry.text.startsWith('Command not recognized') || lastEntry.text === '?Invalid command');
+    if (isGenericMiss && !forcePenalty) {
+      lastEntry.text =
+        'Comando no reconocido en este punto de la operación. Escribe "help" para ver los disponibles (no penaliza).';
+      return;
+    }
     const activeDiff = DIFFICULTY_CONFIG[difficultyRef.current] ?? DIFFICULTY_CONFIG.NORMAL;
     const nextFailures = failedAttempts + 1;
     setFailedAttempts(nextFailures);
@@ -5965,7 +5461,7 @@ export default function App() {
         '| node_ip       | hostname            | open_services           | notes                             |',
         '+---------------+---------------------+-------------------------+-----------------------------------+',
         '| 10.0.0.15     | HP-LaserJet-M479fdw | 21/FTP (anon), 445/SMB  | Spool backup: config_backup.bak   |',
-        '| 10.0.0.50     | ECorp-Sec-Srv-01    | 445/SMB (Security_Logs) | Account: print-admin%P@ssw0rd_pr1nt|',
+        '| 10.0.0.50     | ECorp-Sec-Srv-01    | 445/SMB (Security_Logs) | Account: print-admin (ver backup) |',
         '| 10.0.0.100    | ECorp-CEO-Desktop   | 22/SSH (user: ceo)      | Vault PIN file: safe_code.b64     |',
         '+---------------+---------------------+-------------------------+-----------------------------------+',
         '',
@@ -5976,8 +5472,8 @@ export default function App() {
         '+------------------+------------------------------------------+-----------------------+',
         '| subsystem        | api_endpoint                             | active_credential     |',
         '+------------------+------------------------------------------+-----------------------+',
-        '| PERIMETER_ALARM  | http://192.168.99.10/api/alarm/disable   | guard_01:Al4rm_0ff_99 |',
-        '| CCTV_CORRIDOR_B3 | telnet://192.168.99.20:23                | root:12345            |',
+        '| PERIMETER_ALARM  | http://192.168.99.10/api/alarm/disable   | guard_01:************ |',
+        '| CCTV_CORRIDOR_B3 | telnet://192.168.99.20:23                | valores de fábrica    |',
         '+------------------+------------------------------------------+-----------------------+',
         '',
         `[INFO] table 'ecorp_db.*' dumped to CSV files under '/root/.local/share/sqlmap/output/ecorp.com/dump/ecorp_db/'`,
@@ -6231,7 +5727,7 @@ export default function App() {
         });
         setInternalStep(2);
         setCurrentPrompt('ftp>');
-        setWindowTitle('eliot@fsociety:~/ecorp_internal (ftp 10.0.0.15)');
+        setWindowTitle('elliot@fsociety:~/ecorp_internal (ftp 10.0.0.15)');
         setTerminalLogs((prev) => [...prev, ...newEntries]);
         return;
       }
@@ -6288,8 +5784,8 @@ export default function App() {
         });
 
         setInternalStep(3);
-        setCurrentPrompt('eliot@fsociety:~/ecorp_internal#');
-        setWindowTitle('eliot@fsociety:~/ecorp_internal');
+        setCurrentPrompt('elliot@fsociety:~/ecorp_internal#');
+        setWindowTitle('elliot@fsociety:~/ecorp_internal');
         setTerminalLogs((prev) => [...prev, ...newEntries]);
 
         if (transitionTimerRef.current) {
@@ -6337,9 +5833,10 @@ export default function App() {
               '  nmap -sP                     Ping Scan rápido de hosts activos en la subred (+5% IDS)',
               '  nmap -A                      OS Fingerprinting y versión exacta del nodo (+25% IDS)',
               '  nmap -p- / nmap -v           Escaneo profundo o detallado del servidor 10.0.0.50',
-              '  smbclient -L //10.0.0.50 -U print-admin%P@ssw0rd_pr1nt',
-              '  smbclient //10.0.0.50/Security_Logs -U print-admin%P@ssw0rd_pr1nt',
-              '  proxmark3 -c "hf mf cload -f 047AB219C855"',
+              '  smbclient -L //<host> -U <usuario>%<clave>      Lista los recursos compartidos',
+              '  smbclient //<host>/<recurso> -U <usuario>%<clave>  Abre un recurso compartido',
+              '  proxmark3 -c "hf mf cload -f <UID>"              Clona una tarjeta (ver rfid_manual.txt)',
+              '  ls -la / cat <archivo>       Revisa las notas de este nodo',
               '  logdump',
               '  clear',
             ].join('\n'),
@@ -6409,7 +5906,7 @@ export default function App() {
         });
         setSecurityStep(2);
         setCurrentPrompt('smb: \\>');
-        setWindowTitle('eliot@fsociety:~/ecorp_security (smb //10.0.0.50/Security_Logs)');
+        setWindowTitle('elliot@fsociety:~/ecorp_security (smb //10.0.0.50/Security_Logs)');
         setTerminalLogs((prev) => [...prev, ...newEntries]);
         return;
       }
@@ -6477,8 +5974,8 @@ export default function App() {
         }
 
         setSecurityStep(4);
-        setCurrentPrompt('eliot@fsociety:~/ecorp_security#');
-        setWindowTitle('eliot@fsociety:~/ecorp_security');
+        setCurrentPrompt('elliot@fsociety:~/ecorp_security#');
+        setWindowTitle('elliot@fsociety:~/ecorp_security');
         newEntries.push({
           id: Date.now() + 1,
           type: 'output',
@@ -6834,7 +6331,8 @@ export default function App() {
               'Comandos disponibles (Escena 5 - Exteriores ECorp):',
               '  ping 192.168.99.20           Verifica conectividad ICMP con alarma/cámara (+2% IDS)',
               '  python3 evil_portal.py --ssid "ECorp_Security"',
-              '  curl -u guard_01:Al4rm_0ff_99 -X POST http://192.168.99.10/api/alarm/disable',
+              '  curl -u <usuario>:<clave> -X POST <url de la API de la alarma>',
+              '  ls -la / cat <archivo>       Revisa las notas de este nodo',
               '  nmap -sP [192.168.99.0/24]   Ping Scan rápido de dispositivos IoT/CCTV (+5% IDS)',
               '  nmap 192.168.99.0/24         Barrido estándar de subred perimetral (+15% IDS)',
               '  nmap -A [192.168.99.20]      OS Fingerprinting y versiones de Cam-OS (+25% IDS)',
@@ -7139,7 +6637,7 @@ export default function App() {
 
         setVaultStep(1);
         setCurrentPrompt('vault>');
-        setWindowTitle('eliot@fsociety:~/ecorp_vault (/dev/ttyUSB0)');
+        setWindowTitle('elliot@fsociety:~/ecorp_vault (/dev/ttyUSB0)');
         setTerminalLogs((prev) => [...prev, ...newEntries]);
         return;
       }
@@ -7924,16 +7422,6 @@ export default function App() {
     }
   };
 
-  const handleCopyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(STANDALONE_JS_CODE);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback
-    }
-  };
-
   const containerBgClass =
     sceneState === 'SCENE_6' || sceneState === 'WIN'
       ? useBackgroundImg
@@ -8081,7 +7569,7 @@ export default function App() {
         id: 'node-web',
         code: '01',
         label: 'Web DMZ',
-        ip: '192.168.1.50',
+        ip: '198.51.100.42',
         role: 'Apache / SQLi Gateway',
         compromised: isWebCompromised,
         activeTarget: sceneState === 'SCENE_1',
@@ -8094,8 +7582,8 @@ export default function App() {
         id: 'node-printer',
         code: '02',
         label: 'Impresora',
-        ip: '192.168.1.15',
-        role: 'NetLaser / Pivot',
+        ip: '10.0.0.15',
+        role: 'HP LaserJet / Pivot',
         compromised: isPrinterCompromised,
         activeTarget: sceneState === 'SCENE_2',
         targetX: 114,
@@ -8107,8 +7595,8 @@ export default function App() {
         id: 'node-security',
         code: '03',
         label: 'Seguridad',
-        ip: '10.10.10.5',
-        role: 'Allsafe SIEM / IDS',
+        ip: '10.0.0.50',
+        role: 'Control de accesos RFID',
         compromised: isSecurityCompromised,
         activeTarget: sceneState === 'SCENE_3',
         targetX: 182,
@@ -8119,9 +7607,9 @@ export default function App() {
       {
         id: 'node-ceo',
         code: '04',
-        label: 'CEO Office',
-        ip: '10.10.20.1',
-        role: 'Workstation / RSA Key',
+        label: 'CEO',
+        ip: '10.0.0.100',
+        role: 'Estación del CEO',
         compromised: isCeoCompromised,
         activeTarget: sceneState === 'SCENE_4',
         targetX: 252,
@@ -8132,9 +7620,9 @@ export default function App() {
       {
         id: 'node-vault',
         code: '05',
-        label: 'Caja Fuerte',
-        ip: '10.10.99.99',
-        role: 'Steel Mountain Vault',
+        label: 'Bóveda',
+        ip: '192.168.99.x',
+        role: 'Perímetro y cámara acorazada',
         compromised: isVaultCompromised,
         activeTarget: sceneState === 'SCENE_5' || sceneState === 'SCENE_6',
         targetX: 316,
@@ -8361,41 +7849,93 @@ export default function App() {
     'node-web': {
       code: '01',
       name: 'Web DMZ',
-      ip: '192.168.1.50',
-      service: 'HTTP:80 / MySQL:3306',
+      ip: '198.51.100.42',
+      service: 'HTTP 80 · MySQL 3306',
       owned: isWebCompromised,
     },
     'node-printer': {
       code: '02',
       name: 'Impresora',
-      ip: '192.168.1.15',
-      service: 'JetDirect:9100 / LPD',
+      ip: '10.0.0.15',
+      service: 'FTP 21 · SMB 445',
       owned: isPrinterCompromised,
     },
     'node-security': {
       code: '03',
       name: 'Seguridad',
-      ip: '10.10.10.5',
-      service: 'Allsafe SIEM / SSH:22',
+      ip: '10.0.0.50',
+      service: 'SMB 445 · RFID',
       owned: isSecurityCompromised,
     },
     'node-ceo': {
       code: '04',
-      name: 'CEO Office',
-      ip: '10.10.20.1',
-      service: 'exec-node01 / RSA-4096',
+      name: 'Despacho del CEO',
+      ip: '10.0.0.100',
+      service: 'SSH 22',
       owned: isCeoCompromised,
     },
     'node-vault': {
       code: '05',
       name: 'Caja Fuerte',
-      ip: '10.10.99.99',
-      service: 'HSM-Vault / AES-256',
+      ip: '192.168.99.0/24',
+      service: 'Wi-Fi · Telnet 23 · UART',
       owned: isVaultCompromised,
     },
   };
   const inspectedNode =
     topologyInspectorMeta[selectedTopologyNodeId] ?? topologyInspectorMeta['node-web'];
+
+  const monologueNode = activeMonologue ? (
+        <aside
+          id="elliot-monologue"
+          className={activeMonologue.isParanoia ? 'paranoia-tone' : ''}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="monologue-header">
+            <span className="monologue-speaker-badge">
+              <span className="monologue-voice-wave" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+              <span>{activeMonologue.contextLabel}</span>
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const nextVal = !isVoiceMonologueEnabled;
+                  setIsVoiceMonologueEnabled(nextVal);
+                  if (!nextVal && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                  }
+                }}
+                className="text-[10px] font-mono text-neutral-300 hover:text-[#00ff41] cursor-pointer"
+                title="Activar/Desactivar síntesis de voz en el monólogo interior de Elliot"
+              >
+                [VOZ: {isVoiceMonologueEnabled ? 'ON' : 'OFF'}]
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                  }
+                  setActiveMonologue(null);
+                }}
+                className="text-[10px] font-mono text-neutral-400 hover:text-white cursor-pointer"
+                title="Ocultar subtítulo"
+              >
+                [×]
+              </button>
+            </div>
+          </div>
+
+          <p className="monologue-text">{activeMonologue.text}</p>
+        </aside>
+  ) : null;
 
   return (
     <main id="game-container" className={containerBgClass}>
@@ -8403,13 +7943,33 @@ export default function App() {
       <audio
         id="bg-music"
         ref={bgMusicRef}
-        src="./assets/audio/ost_fsociety.mp3"
+        src={`${ASSET_BASE}assets/audio/ost_fsociety.mp3`}
         muted={isMuted}
         loop
       />
 
+      {/* Trama Manga Seinen + Viñeta */}
+      <div className="manga-overlay" />
+      <div className="manga-vignette" />
+
+      {/* Barra superior: marca, marcador de la partida y controles */}
+      <header id="fs-topbar" ref={topbarRef} className={isGameActive ? 'in-game' : ''}>
+        <a
+          className="fs-brand"
+          href={HOUSE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Un Fantasma en el Sistema"
+        >
+          <img src={HOUSE_LOGO_PATH} alt="Un Fantasma en el Sistema" width={30} height={30} />
+          <span className="fs-brand-text">
+            <strong>FSOCIETY CTF</strong>
+            <small>Operación 5/9</small>
+          </span>
+        </a>
+
       {/* Temporizador de Speedrun + Puntuación en Pantalla (Score) + Nivel de Alerta IDS Allsafe (Esquina superior izquierda) */}
-      {sceneState !== 'SCENE_0' && sceneState !== 'TRANSITIONING' && (
+      {isGameActive && (
         <div id="uptime-hud" role="timer" aria-live="off">
           <div className="hud-top-row">
             <span id="uptime-display">{formatUptime(elapsedSeconds)}</span>
@@ -8477,7 +8037,7 @@ export default function App() {
                   id="ids-alert-label"
                   className={threatLevel > 80 && threatLevel < 100 ? 'ids-value-flicker font-bold' : ''}
                 >
-                  ALERTA DE INTRUSIÓN (IDS):
+                  ALERTA IDS:
                 </span>
                 <span className="ids-mac-pill" title="Dirección MAC actual de la interfaz wlan0mon">
                   MAC {operatorSpoofedMac}
@@ -8590,241 +8150,122 @@ export default function App() {
         </div>
       )}
 
-      {/* Trama Manga Seinen + Viñeta */}
-      <div className="manga-overlay" />
-      <div className="manga-vignette" />
-
-      {/* Controles discretos de vista previa (Esquina superior derecha) */}
-      <div className="fixed top-4 right-4 z-40 flex items-center gap-1.5 flex-wrap justify-end">
-        <div className="flex items-center bg-black/85 border border-neutral-700 px-2 py-1 gap-2">
-          <button
-            id="mute-toggle-btn"
-            type="button"
-            onClick={handleToggleMute}
-            className={`flex items-center gap-1 text-xs font-mono transition-colors cursor-pointer whitespace-nowrap ${
-              isMuted || masterVolume === 0
-                ? 'text-[#d91424]'
-                : 'text-[#00ff41] hover:text-[#00cc33]'
-            }`}
-            title={
-              isMuted || masterVolume === 0
-                ? 'Reactivar música de fondo y efectos de sonido (SFX)'
-                : 'Silenciar música de fondo y efectos de sonido (SFX)'
-            }
-            aria-pressed={isMuted || masterVolume === 0}
-          >
-            {isMuted || masterVolume === 0 ? (
-              <VolumeX className="w-3.5 h-3.5" />
-            ) : (
-              <Volume2 className="w-3.5 h-3.5" />
-            )}
-            <span>{isMuted || masterVolume === 0 ? 'OFF' : 'ON'}</span>
-          </button>
-
-          <input
-            id="volume-slider"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={isMuted ? 0 : masterVolume}
-            onChange={handleVolumeSliderChange}
-            aria-label="Volumen maestro"
-            title={`Volumen maestro: ${Math.round((isMuted ? 0 : masterVolume) * 100)}%`}
-            className="w-20 h-1.5 accent-[#00ff41] bg-neutral-800 cursor-pointer"
-          />
-
-          <span
-            id="volume-value-label"
-            className="text-[11px] font-mono text-neutral-300 w-8 text-right select-none"
-          >
-            {Math.round((isMuted ? 0 : masterVolume) * 100)}%
-          </span>
-
-          <div
-            id="sfx-test-bar"
-            className="flex items-center gap-1 pl-1.5 border-l border-neutral-700"
-            title="Probar efectos de sonido (SFX) sintetizados con Web Audio API: Bip (tecleo), Éxito (comando correcto) y Error (comando fallido)"
-          >
+        <div className="fs-controls">
+          <div className="fs-audio">
             <button
+              id="mute-toggle-btn"
               type="button"
-              onClick={() => playTypingSfx('a')}
-              className="px-1 py-0.5 text-[10px] font-mono text-[#38bdf8] border border-neutral-700 hover:border-[#38bdf8] hover:bg-[#38bdf8]/15 cursor-pointer transition-colors"
-              title="Probar SFX 'Bip' de tecleo en terminal (Web Audio API)"
+              onClick={handleToggleMute}
+              className={`fs-ctl ${isMuted || masterVolume === 0 ? 'is-off' : 'is-on'}`}
+              title={isMuted || masterVolume === 0 ? 'Activar el sonido' : 'Silenciar música y efectos'}
+              aria-label={isMuted || masterVolume === 0 ? 'Activar el sonido' : 'Silenciar'}
+              aria-pressed={isMuted || masterVolume === 0}
             >
-              BIP
+              {isMuted || masterVolume === 0 ? <VolumeX /> : <Volume2 />}
             </button>
-            <button
-              type="button"
-              onClick={() => playSuccessSfx()}
-              className="px-1 py-0.5 text-[10px] font-mono text-[#00ff41] border border-neutral-700 hover:border-[#00ff41] hover:bg-[#00ff41]/15 cursor-pointer transition-colors"
-              title="Probar SFX de 'Éxito' para acciones correctas (Web Audio API)"
-            >
-              ÉXITO
-            </button>
-            <button
-              type="button"
-              onClick={() => playErrorSfx()}
-              className="px-1 py-0.5 text-[10px] font-mono text-[#ff5f56] border border-neutral-700 hover:border-[#ff5f56] hover:bg-[#ff5f56]/15 cursor-pointer transition-colors"
-              title="Probar SFX de 'Error' para comandos fallidos (Web Audio API)"
-            >
-              ERROR
-            </button>
+            <input
+              id="volume-slider"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={isMuted ? 0 : masterVolume}
+              onChange={handleVolumeSliderChange}
+              aria-label="Volumen"
+              title={`Volumen: ${Math.round((isMuted ? 0 : masterVolume) * 100)} %`}
+            />
           </div>
-        </div>
 
-        <button
-          id="toggle-map-btn"
-          type="button"
-          onClick={() => setIsNetworkMapOpen((prev) => !prev)}
-          className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono border transition-colors cursor-pointer whitespace-nowrap ${
-            isNetworkMapOpen
-              ? 'bg-[#00ff41]/15 text-[#00ff41] border-[#00ff41]'
-              : 'bg-black/80 text-neutral-300 border-neutral-700 hover:border-[#00ff41] hover:text-[#00ff41]'
-          }`}
-          title="Mostrar/Ocultar ventana flotante Network Topology"
-        >
-          <Network className="w-3.5 h-3.5" />
-          <span>Mapa Red ({compromisedCount}/5)</span>
-        </button>
-
-        <button
-          id="toggle-sniffer-btn"
-          type="button"
-          onClick={() => setIsSnifferOpen((prev) => !prev)}
-          className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono border transition-colors cursor-pointer whitespace-nowrap ${
-            isSnifferOpen
-              ? 'bg-[#00ff41]/15 text-[#00ff41] border-[#00ff41]'
-              : 'bg-black/80 text-neutral-300 border-neutral-700 hover:border-[#00ff41] hover:text-[#00ff41]'
-          }`}
-          title="Mostrar/Ocultar Analizador de Paquetes (Mini-Wireshark / tcpdump)"
-        >
-          <Activity className="w-3.5 h-3.5" />
-          <span>Sniffer / tcpdump</span>
-        </button>
-
-        <button
-          id="toggle-irc-btn"
-          type="button"
-          onClick={() => {
-            setIsIrcOpen((prev) => !prev);
-            setIsIrcMinimized(false);
-          }}
-          className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono border transition-colors cursor-pointer whitespace-nowrap ${
-            isIrcOpen
-              ? 'bg-[#00ff41]/15 text-[#00ff41] border-[#00ff41]'
-              : 'bg-black/80 text-neutral-300 border-neutral-700 hover:border-[#00ff41] hover:text-[#00ff41]'
-          }`}
-          title="Mostrar/Ocultar Chat IRC Flotante (#fsociety-irc)"
-        >
-          <MessageSquare className="w-3.5 h-3.5" />
-          <span>IRC #fsociety</span>
-          {unreadIrcCount > 0 && (
-            <span className="ml-1 px-1 py-0.2 bg-[#d91424] text-white text-[10px] font-bold">
-              {unreadIrcCount}
-            </span>
+          {isGameActive && (
+            <>
+              <button
+                id="toggle-map-btn"
+                type="button"
+                onClick={() => setIsNetworkMapOpen((prev) => !prev)}
+                className={`fs-ctl ${isNetworkMapOpen ? 'is-on' : ''}`}
+                title="Mostrar u ocultar el mapa de red"
+                aria-pressed={isNetworkMapOpen}
+              >
+                <Network />
+                <span>Red {compromisedCount}/5</span>
+              </button>
+              <button
+                id="toggle-sniffer-btn"
+                type="button"
+                onClick={() => setIsSnifferOpen((prev) => !prev)}
+                className={`fs-ctl ${isSnifferOpen ? 'is-on' : ''}`}
+                title="Mostrar u ocultar el analizador de paquetes (tcpdump)"
+                aria-pressed={isSnifferOpen}
+              >
+                <Activity />
+                <span>Sniffer</span>
+              </button>
+              <button
+                id="toggle-irc-btn"
+                type="button"
+                onClick={() => {
+                  setIsIrcOpen((prev) => !prev);
+                  setIsIrcMinimized(false);
+                }}
+                className={`fs-ctl ${isIrcOpen ? 'is-on' : ''}`}
+                title="Mostrar u ocultar el chat IRC del equipo"
+                aria-pressed={isIrcOpen}
+              >
+                <MessageSquare />
+                <span>IRC</span>
+                {unreadIrcCount > 0 && <b className="fs-ctl-count">{unreadIrcCount}</b>}
+              </button>
+            </>
           )}
-        </button>
 
-        {sceneState !== 'SCENE_0' && (
-          <button
-            type="button"
-            onClick={handleResetGameComplete}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono bg-black/80 text-neutral-300 border border-neutral-700 hover:border-[#d91424] hover:text-[#d91424] transition-colors cursor-pointer whitespace-nowrap"
-            title="Borrar partida guardada en localStorage y volver a Escena 0"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset Save</span>
-          </button>
-        )}
+          {sceneState !== 'SCENE_0' && sceneState !== 'TRANSITIONING' && (
+            <>
+              <button
+                type="button"
+                onClick={() => setIsMissionModalOpen(true)}
+                className="fs-ctl"
+                title="Ver la directiva de la operación"
+              >
+                <FileText />
+                <span>Misión</span>
+              </button>
+              <button
+                id="reset-save-btn"
+                type="button"
+                onClick={handleConfirmReset}
+                className="fs-ctl is-danger"
+                title="Borrar la partida guardada y volver al inicio"
+              >
+                <RotateCcw />
+                <span>Reiniciar</span>
+              </button>
+            </>
+          )}
 
-        {sceneState !== 'SCENE_2' && (
-          <button
-            type="button"
-            onClick={triggerScene2Transition}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono bg-black/80 text-neutral-300 border border-neutral-700 hover:border-[#00ff41] hover:text-[#00ff41] transition-colors cursor-pointer whitespace-nowrap"
-          >
-            <Terminal className="w-3.5 h-3.5" />
-            <span>Escena 2</span>
-          </button>
-        )}
-
-        {sceneState !== 'SCENE_3' && (
-          <button
-            type="button"
-            onClick={triggerScene3Transition}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono bg-black/80 text-neutral-300 border border-neutral-700 hover:border-[#00ff41] hover:text-[#00ff41] transition-colors cursor-pointer whitespace-nowrap"
-          >
-            <Terminal className="w-3.5 h-3.5" />
-            <span>Escena 3</span>
-          </button>
-        )}
-
-        {sceneState !== 'SCENE_4' && (
-          <button
-            type="button"
-            onClick={triggerScene4Transition}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono bg-black/80 text-neutral-300 border border-neutral-700 hover:border-[#00ff41] hover:text-[#00ff41] transition-colors cursor-pointer whitespace-nowrap"
-          >
-            <Terminal className="w-3.5 h-3.5" />
-            <span>Escena 4</span>
-          </button>
-        )}
-
-        {sceneState !== 'SCENE_5' && (
-          <button
-            type="button"
-            onClick={triggerScene5Transition}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono bg-black/80 text-neutral-300 border border-neutral-700 hover:border-[#00ff41] hover:text-[#00ff41] transition-colors cursor-pointer whitespace-nowrap"
-          >
-            <Terminal className="w-3.5 h-3.5" />
-            <span>Escena 5</span>
-          </button>
-        )}
-
-        {sceneState !== 'SCENE_6' && (
-          <button
-            type="button"
-            onClick={triggerScene6Transition}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono bg-black/80 text-neutral-300 border border-neutral-700 hover:border-[#00ff41] hover:text-[#00ff41] transition-colors cursor-pointer whitespace-nowrap"
-          >
-            <Terminal className="w-3.5 h-3.5" />
-            <span>Escena 6</span>
-          </button>
-        )}
-
-        {sceneState !== 'WIN' && (
-          <button
-            id="preview-win-btn"
-            type="button"
-            onClick={triggerWinScreenTransition}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono bg-black/80 text-[#00ff41] border border-[#00ff41]/60 hover:bg-[#00ff41]/15 hover:border-[#00ff41] transition-colors cursor-pointer whitespace-nowrap"
-            title="Ir a la pantalla de Victoria para probar la descarga de fsociety_report.pdf"
-          >
-            <FileDown className="w-3.5 h-3.5" />
-            <span>Victoria / PDF</span>
-          </button>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setUseBackgroundImg((prev) => !prev)}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono bg-black/80 text-neutral-300 border border-neutral-700 hover:border-[#00ff41] hover:text-[#00ff41] transition-colors cursor-pointer whitespace-nowrap"
-          title="Alternar imagen de fondo de la escena"
-        >
-          <ImageIcon className="w-3.5 h-3.5" />
-          <span>{currentBgLabel}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowCodeModal(true)}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono bg-black/80 text-neutral-300 border border-neutral-700 hover:border-[#00ff41] hover:text-[#00ff41] transition-colors cursor-pointer whitespace-nowrap"
-        >
-          <Code2 className="w-3.5 h-3.5" />
-          <span>Ver JS Guardado/Reloj</span>
-        </button>
-      </div>
+          {IS_DEV_MODE && (
+            <div className="fs-dev" title="Atajos de desarrollo (?dev)">
+              {(
+                [
+                  ['Escena 2', triggerScene2Transition],
+                  ['Escena 3', triggerScene3Transition],
+                  ['Escena 4', triggerScene4Transition],
+                  ['Escena 5', triggerScene5Transition],
+                  ['Escena 6', triggerScene6Transition],
+                ] as Array<[string, () => void]>
+              ).map(([label, go]) => (
+                <button key={label} type="button" onClick={go} className="fs-ctl">
+                  <Terminal />
+                  <span>{label}</span>
+                </button>
+              ))}
+              <button id="preview-win-btn" type="button" onClick={triggerWinScreenTransition} className="fs-ctl">
+                <FileDown />
+                <span>Victoria</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
 
       {/* ====================================================================
           ESCENA 0: PANTALLA DE BIENVENIDA + SPEEDRUN LEADERBOARD TOP 5
@@ -8836,15 +8277,20 @@ export default function App() {
         >
           {/* Tabla de Clasificación Speedrun Top 5 en la pantalla de inicio */}
           {isStartLeaderboardOpen && (
-            <aside
-              id="start-leaderboard"
-              className="speedrun-leaderboard-panel scene0-leaderboard-floating"
+            <div
+              className="mission-modal-overlay open"
+              role="dialog"
+              aria-modal="true"
               aria-label="Ranking Speedrun Top 5"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setIsStartLeaderboardOpen(false);
+              }}
             >
+            <aside id="start-leaderboard" className="speedrun-leaderboard-panel fs-leaderboard-modal">
               <div className="leaderboard-header">
                 <span className="leaderboard-title">
                   <Trophy className="w-3.5 h-3.5 text-[#00ff41]" />
-                  <span>TOP 5 SPEEDRUN // LOCALBOARD</span>
+                  <span>TOP 5 SPEEDRUN</span>
                 </span>
                 <button
                   type="button"
@@ -8852,7 +8298,7 @@ export default function App() {
                   className="text-[10px] text-neutral-400 hover:text-[#ff0033] cursor-pointer"
                   title="Restablecer tabla de clasificación por defecto"
                 >
-                  [RESET]
+                  [RESTABLECER]
                 </button>
               </div>
               <table className="leaderboard-table">
@@ -8893,7 +8339,15 @@ export default function App() {
                   })}
                 </tbody>
               </table>
+              <button
+                type="button"
+                onClick={() => setIsStartLeaderboardOpen(false)}
+                className="mission-close-btn mt-4"
+              >
+                [ X CERRAR ]
+              </button>
             </aside>
+            </div>
           )}
 
           <header className="title-wrapper">
@@ -9035,15 +8489,23 @@ export default function App() {
                 [ RANKING TOP 5 ]
               </button>
 
-              <button
-                type="button"
-                onClick={() => setIsNetworkMapOpen((prev) => !prev)}
-                disabled={sceneState === 'TRANSITIONING'}
-                className="terminal-mission-btn"
-              >
-                [ MAPA DE RED ]
-              </button>
             </div>
+
+            <footer className="fs-start-footer">
+              <span>
+                Simulador educativo: todos los sistemas, direcciones y credenciales son ficticios.
+                Proyecto de fans sin relación con los titulares de <em>Mr. Robot</em>.
+              </span>
+              <span>
+                <a href={HOUSE_URL} target="_blank" rel="noopener noreferrer">
+                  unfantasmaenelsistema.com
+                </a>
+                {' · '}
+                <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
+                  Código en GitHub
+                </a>
+              </span>
+            </footer>
           </div>
         </section>
       ) : null}
@@ -9051,12 +8513,12 @@ export default function App() {
       {/* ====================================================================
           SEGUNDA VENTANA FLOTANTE: NETWORK TOPOLOGY (#network-map)
           ==================================================================== */}
-      {isNetworkMapOpen && (
+      {isNetworkMapOpen && isGameActive && (
         <div
           id="network-map"
           ref={netMapRef}
           className={isNetworkMapMinimized ? 'minimized' : ''}
-          style={{ left: `${netMapPos.x}px`, top: `${netMapPos.y}px` }}
+          style={{ left: `${netMapPos.x}px`, top: `${netMapPos.y}px`, width: `${sidePanel.w}px` }}
         >
           <div id="network-map-header" onMouseDown={handleMapHeaderMouseDown}>
             <div className="kali-window-controls">
@@ -9072,7 +8534,7 @@ export default function App() {
               />
               <span className="kali-btn maximize" />
             </div>
-            <span className="kali-title">Network Topology</span>
+            <span className="kali-title">Topología de red</span>
             <button
               id="minimize-map-btn"
               type="button"
@@ -9085,8 +8547,8 @@ export default function App() {
 
           <div className="network-grid-body">
             <div className="topology-subtitle">
-              <span>ECORP D3.JS TOPOLOGY</span>
-              <span>{compromisedCount}/5 OWNED</span>
+              <span>RED ECORP</span>
+              <span>{compromisedCount}/5 COMPROMETIDOS</span>
             </div>
 
             {/* Lienzo interactivo D3.js Force-Directed Topology */}
@@ -9113,6 +8575,7 @@ export default function App() {
                   [{inspectedNode.code}] {inspectedNode.name}
                 </span>
                 <span className="text-cyan-300/90">{inspectedNode.ip}</span>
+                <span className="text-neutral-400 truncate">{inspectedNode.service}</span>
               </div>
               <span
                 className={`px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider ${
@@ -9121,87 +8584,18 @@ export default function App() {
                     : 'bg-[#ff0033]/20 text-[#ff4d6d] border border-[#ff0033]/40'
                 }`}
               >
-                {inspectedNode.owned ? 'COMPROMISED' : 'LOCKED'}
+                {inspectedNode.owned ? 'COMPROMETIDO' : 'BLOQUEADO'}
               </span>
-            </div>
-
-            <div className="topology-nodes-track">
-              {/* Nodo 1: Web */}
-              <div
-                id="node-web"
-                onClick={() => setSelectedTopologyNodeId('node-web')}
-                className={`net-node cursor-pointer ${isWebCompromised ? 'compromised' : ''} ${
-                  sceneState === 'SCENE_1' ? 'active-target' : ''
-                }`}
-              >
-                <div className="net-node-circle">01</div>
-                <span className="net-node-label">Web</span>
-              </div>
-
-              <div className={`net-connector ${isWebCompromised ? 'compromised' : ''}`} />
-
-              {/* Nodo 2: Impresora */}
-              <div
-                id="node-printer"
-                onClick={() => setSelectedTopologyNodeId('node-printer')}
-                className={`net-node cursor-pointer ${isPrinterCompromised ? 'compromised' : ''} ${
-                  sceneState === 'SCENE_2' ? 'active-target' : ''
-                }`}
-              >
-                <div className="net-node-circle">02</div>
-                <span className="net-node-label">Impresora</span>
-              </div>
-
-              <div className={`net-connector ${isPrinterCompromised ? 'compromised' : ''}`} />
-
-              {/* Nodo 3: Seguridad */}
-              <div
-                id="node-security"
-                onClick={() => setSelectedTopologyNodeId('node-security')}
-                className={`net-node cursor-pointer ${isSecurityCompromised ? 'compromised' : ''} ${
-                  sceneState === 'SCENE_3' ? 'active-target' : ''
-                }`}
-              >
-                <div className="net-node-circle">03</div>
-                <span className="net-node-label">Seguridad</span>
-              </div>
-
-              <div className={`net-connector ${isSecurityCompromised ? 'compromised' : ''}`} />
-
-              {/* Nodo 4: CEO */}
-              <div
-                id="node-ceo"
-                onClick={() => setSelectedTopologyNodeId('node-ceo')}
-                className={`net-node cursor-pointer ${isCeoCompromised ? 'compromised' : ''} ${
-                  sceneState === 'SCENE_4' ? 'active-target' : ''
-                }`}
-              >
-                <div className="net-node-circle">04</div>
-                <span className="net-node-label">CEO</span>
-              </div>
-
-              <div className={`net-connector ${isCeoCompromised ? 'compromised' : ''}`} />
-
-              {/* Nodo 5: Caja Fuerte */}
-              <div
-                id="node-vault"
-                onClick={() => setSelectedTopologyNodeId('node-vault')}
-                className={`net-node cursor-pointer ${isVaultCompromised ? 'compromised' : ''} ${
-                  sceneState === 'SCENE_5' || sceneState === 'SCENE_6' ? 'active-target' : ''
-                }`}
-              >
-                <div className="net-node-circle">05</div>
-                <span className="net-node-label">Caja Fuerte</span>
-              </div>
             </div>
 
             <div className="topology-legend">
               <span className="legend-item">
-                <i className="legend-dot locked" /> LOCKED (#ff0033)
+                <i className="legend-dot locked" /> Bloqueado
               </span>
               <span className="legend-item">
-                <i className="legend-dot owned" /> PWNED BLINK (#00ff00)
+                <i className="legend-dot owned" /> Comprometido
               </span>
+              <span className="legend-item text-neutral-500">Arrastra o pulsa un nodo</span>
             </div>
           </div>
         </div>
@@ -9210,7 +8604,7 @@ export default function App() {
       {/* ====================================================================
           TERCERA MICRO-VENTANA FLOTANTE: MINI-WIRESHARK / TCPDUMP (#packet-sniffer)
           ==================================================================== */}
-      {isSnifferOpen && (
+      {isSnifferOpen && isGameActive && (
         <div
           id="packet-sniffer"
           ref={snifferRef}
@@ -9275,12 +8669,21 @@ export default function App() {
       {/* ====================================================================
           CUARTA MICRO-VENTANA FLOTANTE / ACOPLABLE: CHAT IRC (#fsociety-irc)
           ==================================================================== */}
-      {isIrcOpen && sceneState !== 'SCENE_0' && sceneState !== 'TRANSITIONING' && (
+      {isIrcOpen && isGameActive && (
         <div
           id="fsociety-irc"
           ref={ircRef}
           className={`${isIrcMinimized ? 'minimized' : ''} ${isIrcDocked ? 'docked' : ''}`}
-          style={isIrcDocked ? undefined : { left: `${ircPos.x}px`, top: `${ircPos.y}px` }}
+          style={
+            isIrcDocked
+              ? undefined
+              : {
+                  left: `${ircPos.x}px`,
+                  top: `${ircPos.y}px`,
+                  width: `${sidePanel.w}px`,
+                  height: isIrcMinimized ? undefined : `${sidePanel.ircH}px`,
+                }
+          }
         >
           <div id="fsociety-irc-header" onMouseDown={handleIrcHeaderMouseDown}>
             <div className="kali-window-controls">
@@ -9366,61 +8769,6 @@ export default function App() {
       )}
 
       {/* ====================================================================
-          MONÓLOGO INTERIOR DE ELLIOT (VOZ Y SUBTÍTULOS NOVELA VISUAL #elliot-monologue)
-          ==================================================================== */}
-      {activeMonologue && sceneState !== 'SCENE_0' && sceneState !== 'TRANSITIONING' && (
-        <aside
-          id="elliot-monologue"
-          className={activeMonologue.isParanoia ? 'paranoia-tone' : ''}
-          role="status"
-          aria-live="polite"
-        >
-          <div className="monologue-header">
-            <span className="monologue-speaker-badge">
-              <span className="monologue-voice-wave" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </span>
-              <span>{activeMonologue.contextLabel}</span>
-            </span>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const nextVal = !isVoiceMonologueEnabled;
-                  setIsVoiceMonologueEnabled(nextVal);
-                  if (!nextVal && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                  }
-                }}
-                className="text-[10px] font-mono text-neutral-300 hover:text-[#00ff41] cursor-pointer"
-                title="Activar/Desactivar síntesis de voz en el monólogo interior de Elliot"
-              >
-                [VOZ: {isVoiceMonologueEnabled ? 'ON' : 'OFF'}]
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                  }
-                  setActiveMonologue(null);
-                }}
-                className="text-[10px] font-mono text-neutral-400 hover:text-white cursor-pointer"
-                title="Ocultar subtítulo"
-              >
-                [×]
-              </button>
-            </div>
-          </div>
-
-          <p className="monologue-text">{activeMonologue.text}</p>
-        </aside>
-      )}
-
-      {/* ====================================================================
           ESCENAS 1 A 6: TERMINAL FLOTANTE (#kali-terminal.crt-effect)
           ==================================================================== */}
       <section
@@ -9437,7 +8785,12 @@ export default function App() {
           className={`crt-effect theme-${terminalTheme} ${
             isTerminalBlurred ? 'paranoia-blur-active' : ''
           }`}
-          style={{ left: `${termPos.x}px`, top: `${termPos.y}px` }}
+          style={{
+            left: `${termPos.x}px`,
+            top: `${termPos.y}px`,
+            width: `${termSize.w}px`,
+            height: `${termSize.h}px`,
+          }}
           onClick={() => {
             const selection = window.getSelection();
             if (!selection || selection.toString().length === 0) {
@@ -9473,9 +8826,12 @@ export default function App() {
               className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-white/15 bg-black/50 text-neutral-200 hover:border-white/40 cursor-pointer transition-colors"
               title="Cambiar perfil de color de la terminal (Comando: theme Matrix | Dracula | Monokai)"
             >
-              THEME: {terminalTheme.toUpperCase()}
+              TEMA: {terminalTheme.toUpperCase()}
             </button>
           </div>
+
+          {/* Monólogo interior de Elliot: franja propia, no tapa la salida ni la entrada */}
+          {monologueNode}
 
           {/* Área de salida de texto con scroll */}
           <div id="terminal-output" ref={outputRef}>
@@ -10297,6 +9653,7 @@ export default function App() {
 
           return (
             <section className="win-screen-container">
+              {monologueNode}
               <h1 className="win-glitch-text" data-text={WIN_VICTORY_TEXT}>
                 {WIN_VICTORY_TEXT}
               </h1>
@@ -10306,7 +9663,7 @@ export default function App() {
                   <div className="win-telemetry-row">
                     <span>TIEMPO FINAL: {formatUptime(elapsedSeconds)}</span>
                     <span>RANGO: [{rankInfo.grade}] {rankInfo.title}</span>
-                    <span>SCORE EN VIVO: {playerScore} PTS</span>
+                    <span>PUNTOS DE CAMPO: {playerScore}</span>
                   </div>
 
                   {/* Escala Visual de Rangos (S+, A, B, C) y Veredicto de Evaluación */}
@@ -10332,7 +9689,7 @@ export default function App() {
                   {/* Barra de Calificación Final (S+, A, B, C), Desglose (UPTIME, failedAttempts, Meta-Hacks) y Vista Previa QR Vectorial */}
                   <div className="win-rank-strip">
                     <div className={`win-rank-badge-box ${rankInfo.badgeClass}`}>
-                      <span className="win-rank-label">RANGO PDF</span>
+                      <span className="win-rank-label">RANGO</span>
                       <span className="win-rank-letter">{rankInfo.grade}</span>
                       <span className="win-rank-score">{rankInfo.score} / 1000 PTS</span>
                     </div>
@@ -10347,7 +9704,7 @@ export default function App() {
                         </span>
                       </div>
                       <div className="win-metric-item">
-                        <span className="text-neutral-400">2. FAILED ATTEMPTS:</span>
+                        <span className="text-neutral-400">2. INTENTOS FALLIDOS:</span>
                         <span
                           className={
                             totalFailedAttempts === 0 ? 'text-[#00ff41] font-bold' : 'text-[#ffbd2e]'
@@ -10375,7 +9732,7 @@ export default function App() {
                         </span>
                       </div>
                       <div className="win-metric-item">
-                        <span className="text-neutral-400">5. PISTAS (HINTS):</span>
+                        <span className="text-neutral-400">5. PISTAS PEDIDAS:</span>
                         <span className={hintsUsed === 0 ? 'text-[#00ff41]' : 'text-[#ff0033]'}>
                           {hintsUsed} (-{hintsUsed * 100} PTS)
                         </span>
@@ -10421,13 +9778,13 @@ export default function App() {
                   <div className="win-report-content-grid">
                     <img
                       src={FSOCIETY_REPORT_LOGO_PATH}
-                      alt="Fsociety Official Emblem"
+                      alt="Emblema de la operación"
                       className="win-report-logo"
                     />
 
                     <div className="win-report-fields">
                       <label htmlFor="hacker-alias-input" className="win-alias-label">
-                        ALIAS DEL OPERADOR (RANKING TOP 5 + CERTIFICADO PDF CON QR):
+                        ALIAS DEL OPERADOR (RANKING Y CERTIFICADO PDF):
                       </label>
                       <div className="flex gap-2">
                         <input
@@ -10465,7 +9822,7 @@ export default function App() {
                         onClick={() => void generateMissionReportPDF(hackerAliasInput)}
                         className="win-report-btn"
                       >
-                        [ DESCARGAR INFORME DE MISIÓN (fsociety_report.pdf) ]
+                        [ DESCARGAR INFORME DE MISIÓN (PDF) ]
                       </button>
                     </div>
                   </div>
@@ -10476,7 +9833,7 @@ export default function App() {
                   <div className="leaderboard-header">
                     <span className="leaderboard-title">
                       <Trophy className="w-3.5 h-3.5 text-[#00ff41]" />
-                      <span>TABLA DE CLASIFICACIÓN SPEEDRUN (TOP 5 LOCALSTORAGE)</span>
+                      <span>CLASIFICACIÓN SPEEDRUN · TOP 5 DE ESTE NAVEGADOR</span>
                     </span>
                     <button
                       type="button"
@@ -10674,41 +10031,6 @@ export default function App() {
         aria-hidden="true"
       />
 
-      {/* ====================================================================
-          MODAL CON EL CÓDIGO VANILLA JS ACTUALIZADO
-          ==================================================================== */}
-      {showCodeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
-          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#0d0d10] border-2 border-[#f4f1ea] shadow-[8px_8px_0px_#d91424]">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800 bg-black">
-              <span className="text-xs font-mono font-bold tracking-wider text-[#00ff41] uppercase">
-                main.js — Temporizador Speedrun + Persistencia LocalStorage + Reset
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleCopyCode}
-                  className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-semibold text-black bg-[#00ff41] hover:bg-[#00cc33] transition-colors cursor-pointer"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? 'Copiado' : 'Copiar JS'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCodeModal(false)}
-                  className="p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
-                  aria-label="Cerrar"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            <pre className="p-5 overflow-auto text-xs font-mono text-neutral-200 leading-relaxed select-all">
-              <code>{STANDALONE_JS_CODE}</code>
-            </pre>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

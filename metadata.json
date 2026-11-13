@@ -1,6 +1,0 @@
-{
-  "name": "Fsociety CTF",
-  "description": "Juego interactivo tipo Capture The Flag (CTF) con estética de novela gráfica manga/anime inspirado en el universo de Mr. Robot.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
